@@ -247,25 +247,27 @@ def write_output(content: str, output_file: Optional[str]) -> None:
         console.print(content)
 
 
-def print_summary(ctx: AnalysisContext) -> None:
+def print_summary(ctx: AnalysisContext, verbose: bool = False) -> None:
     """Print analysis summary.
     
     Args:
         ctx: Analysis context with results
+        verbose: If True, print detailed table with metrics
     """
     if not ctx.analysis:
         return
-        
-    table = Table(title="Analysis Summary")
-    table.add_column("Metric", style="cyan")
-    table.add_column("Value", style="magenta")
-    table.add_row("Subreddits analyzed", str(len(ctx.analyzed_subreddits)))
-    table.add_row("Posts processed", str(len(ctx.all_posts)))
-    table.add_row("Comments processed", str(len(ctx.all_comments)))
-    table.add_row("Sentiment", ctx.analysis.sentiment)
     
-    console.print("\n")
-    console.print(table)
+    if verbose:
+        table = Table(title="Analysis Summary")
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", style="magenta")
+        table.add_row("Subreddits analyzed", str(len(ctx.analyzed_subreddits)))
+        table.add_row("Posts processed", str(len(ctx.all_posts)))
+        table.add_row("Comments processed", str(len(ctx.all_comments)))
+        table.add_row("Sentiment", ctx.analysis.sentiment)
+        
+        console.print("\n")
+        console.print(table)
 
     console.print(
         Panel(
@@ -348,7 +350,7 @@ def analyze(
         "-s",
         help="Comma-separated list of subreddits (e.g., r/ai,r/machinelearning)",
     ),
-    output: Optional[str] = typer.Option(
+    output_file: Optional[str] = typer.Option(
         None,
         "--output",
         "-o",
@@ -360,7 +362,7 @@ def analyze(
         "-l",
         help="Maximum number of posts per subreddit",
     ),
-    format: str = typer.Option(
+    output_format: str = typer.Option(
         "markdown",
         "--format",
         "-f",
@@ -391,10 +393,10 @@ def analyze(
         raise typer.Exit(code=1)
 
     # Validate format
-    if format not in ("markdown", "json"):
+    if output_format not in ("markdown", "json"):
         console.print(
             Panel(
-                f"[bold red]Invalid format: {format}. Must be 'markdown' or 'json'",
+                f"[bold red]Invalid format: {output_format}. Must be 'markdown' or 'json'",
                 title="Error",
                 style="red",
             )
@@ -426,23 +428,11 @@ def analyze(
         )
 
         # Format and write output
-        output_content = format_output(ctx.analysis, format)
-        write_output(output_content, output)
+        output_content = format_output(ctx.analysis, output_format)
+        write_output(output_content, output_file)
 
         # Print summary
-        if verbose:
-            print_summary(ctx)
-        else:
-            console.print(
-                Panel(
-                    f"[bold green]✓ Analysis complete![/bold green]\n"
-                    f"  Found {len(ctx.analysis.topics)} topics, "
-                    f"{len(ctx.analysis.pain_points)} pain points, "
-                    f"{len(ctx.analysis.questions)} questions",
-                    title="Done",
-                    style="green",
-                )
-            )
+        print_summary(ctx, verbose=verbose)
 
     except CLIError as e:
         console.print(
