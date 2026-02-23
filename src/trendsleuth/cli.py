@@ -1,27 +1,22 @@
 """CLI entry point for TrendSleuth."""
 
-import os
-import sys
+import logging
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 import typer
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 from rich.panel import Panel
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
-from trendsleuth import __version__
-from trendsleuth.config import (
-    get_config,
-    validate_env_vars,
-    AppConfig,
-    RedditConfig,
-    OpenAIConfig,
-)
+from trendsleuth.analyzer import Analyzer, TrendAnalysis
+from trendsleuth.config import OpenAIConfig, RedditConfig, get_config, validate_env_vars
+from trendsleuth.formatter import format_json, format_markdown
 from trendsleuth.reddit import RedditClient
-from trendsleuth.analyzer import Analyzer
-from trendsleuth.formatter import format_markdown, format_json
 
+logger = logging.getLogger(__name__)
 
 app = typer.Typer(
     name="trendsleuth",
@@ -32,18 +27,37 @@ app = typer.Typer(
 console = Console()
 
 
-def validate_configuration(
-    app_config: AppConfig,
-    openai_config: OpenAIConfig,
-) -> bool:
-    """Validate required configuration."""
+@dataclass
+class AnalysisContext:
+    """Context for a single analysis run."""
+
+    niche: str
+    subreddit_list: list[str]
+    all_posts: list
+    all_comments: list
+    analyzed_subreddits: list[str]
+    analysis: Optional[TrendAnalysis] = None
+
+
+class CLIError(Exception):
+    """Base exception for CLI errors."""
+
+    pass
+
+
+def validate_configuration() -> bool:
+    """Validate required configuration.
+    
+    Returns:
+        True if configuration is valid, False otherwise.
+    """
     missing = validate_env_vars()
     if missing:
         console.print(
             Panel(
                 f"[bold red]Missing required environment variables:[/bold red]\n"
                 f"  {', '.join(missing)}\n\n"
-                f"[bold]Please set these in your environment or .env file.",
+                "[bold]Please set these in your environment or .env file.",
                 title="Configuration Error",
                 style="red",
             )
@@ -56,14 +70,22 @@ def discover_subreddits(
     reddit_client: RedditClient,
     niche: str,
     subreddits: Optional[str],
-    verbose: bool,
 ) -> list[str]:
-    """Discover subreddits for the given niche."""
+    """Discover or validate subreddits for the given niche.
+    
+    Args:
+        reddit_client: Reddit API client
+        niche: Topic to analyze
+        subreddits: Optional comma-separated list of subreddits
+        
+    Returns:
+        List of subreddit names
+        
+    Raises:
+        CLIError: If no subreddits found
+    """
     if subreddits:
-        subreddit_list = [s.strip() for s in subreddits.split(",")]
-        if verbose:
-            console.print(f"[dim]Using specified subreddits: {', '.join(subreddit_list)}[/dim]")
-        return subreddit_list
+        return [s.strip() for s in subreddits.split(",")]
 
     console.print(
         Panel(
@@ -72,20 +94,14 @@ def discover_subreddits(
             style="cyan",
         )
     )
+    
     subreddit_list = reddit_client.search_subreddits(niche, limit=5)
     if not subreddit_list:
-        console.print(
-            Panel(
-                "[bold yellow]No subreddits found for this niche. "
-                "Please try a different topic or specify subreddits manually.",
-                title="No Results",
-                style="yellow",
-            )
+        raise CLIError(
+            "No subreddits found for this niche. "
+            "Please try a different topic or specify subreddits manually."
         )
-        raise typer.Exit(code=1)
 
-    if verbose:
-        console.print(f"[dim]Discovered subreddits: {', '.join(subreddit_list)}[/dim]")
     return subreddit_list
 
 
@@ -94,42 +110,47 @@ def fetch_subreddit_data(
     subreddit_list: list[str],
     post_limit: int,
     comment_limit: int,
-    verbose: bool,
 ) -> tuple[list, list, list[str]]:
-    """Fetch posts and comments from all subreddits."""
+    """Fetch posts and comments from all subreddits.
+    
+    Args:
+        reddit_client: Reddit API client
+        subreddit_list: List of subreddit names
+        post_limit: Maximum posts per subreddit
+        comment_limit: Maximum comments per post
+        
+    Returns:
+        Tuple of (all_posts, all_comments, analyzed_subreddits)
+        
+    Raises:
+        CLIError: If no data could be fetched
+    """
     all_posts = []
     all_comments = []
     analyzed_subreddits = []
 
-    for i, subreddit_name in enumerate(subreddit_list, 1):
-        if verbose:
-            console.print(f"[dim]Fetching {subreddit_name} ({i}/{len(subreddit_list)})...[/dim]")
+    for subreddit_name in subreddit_list:
+        logger.debug(f"Fetching {subreddit_name}...")
 
-        try:
-            data = reddit_client.get_subreddit_data(
-                subreddit_name,
-                post_limit=post_limit,
-                comment_limit=comment_limit,
+        data = reddit_client.get_subreddit_data(
+            subreddit_name,
+            post_limit=post_limit,
+            comment_limit=comment_limit,
+        )
+
+        if data["posts"] or data["comments"]:
+            all_posts.extend(data["posts"])
+            all_comments.extend(data["comments"])
+            analyzed_subreddits.append(subreddit_name)
+            logger.debug(
+                f"Found {len(data['posts'])} posts, {len(data['comments'])} comments"
             )
 
-            if data["posts"] or data["comments"]:
-                all_posts.extend(data["posts"])
-                all_comments.extend(data["comments"])
-                analyzed_subreddits.append(subreddit_name)
-
-                if verbose:
-                    console.print(
-                        f"  ✓ Found {len(data['posts'])} posts, "
-                        f"{len(data['comments'])} comments"
-                    )
-            else:
-                if verbose:
-                    console.print(f"  ⚠ No data retrieved from {subreddit_name}")
-
-        except Exception as e:
-            if verbose:
-                console.print(f"  ✗ Error fetching {subreddit_name}: {e}")
-            continue
+    if not analyzed_subreddits:
+        raise CLIError(
+            "No data could be fetched. "
+            "Check your Reddit API credentials and internet connection."
+        )
 
     return all_posts, all_comments, analyzed_subreddits
 
@@ -137,11 +158,23 @@ def fetch_subreddit_data(
 def analyze_content(
     analyzer: Analyzer,
     niche: str,
-    all_posts: list,
-    all_comments: list,
-    verbose: bool,
-) -> Optional:
-    """Analyze the collected content with the LLM."""
+    posts: list,
+    comments: list,
+) -> TrendAnalysis:
+    """Analyze the collected content with the LLM.
+    
+    Args:
+        analyzer: Analysis client
+        niche: Topic being analyzed
+        posts: List of Reddit posts
+        comments: List of Reddit comments
+        
+    Returns:
+        Analysis results
+        
+    Raises:
+        CLIError: If analysis fails
+    """
     console.print(
         Panel(
             "[bold cyan]Analyzing content with AI...",
@@ -153,88 +186,167 @@ def analyze_content(
     # Limit input to avoid token issues
     analysis = analyzer.analyze_subreddit_data(
         subreddit_name=f"r/{niche.replace(' ', '-')}",
-        posts=all_posts[:20],
-        comments=all_comments[:200],
+        posts=posts[:20],
+        comments=comments[:200],
     )
+
+    if not analysis:
+        raise CLIError(
+            "Failed to analyze the data. "
+            "Please try again with more data or a different model."
+        )
 
     return analysis
 
 
-def output_results(
-    niche: str,
-    analysis,
-    output: Optional[str],
-    format: str,
-    analyzed_subreddits: list[str],
-    all_posts: list,
-    all_comments: list,
-    verbose: bool,
-) -> None:
-    """Format and output results."""
-    if verbose:
-        console.print("\n[bold]Generating output...[/bold]")
-
-    output_content = format_markdown(
-        subreddit=niche,
-        analysis=analysis,
-        token_usage=None,
-        cost=None,
-    ) if format == "markdown" else format_json(
-        subreddit=niche,
+def format_output(analysis: TrendAnalysis, output_format: str) -> str:
+    """Format the analysis results.
+    
+    Args:
+        analysis: Analysis results
+        output_format: Output format ('markdown' or 'json')
+        
+    Returns:
+        Formatted output string
+    """
+    formatters = {
+        "markdown": format_markdown,
+        "json": format_json,
+    }
+    
+    formatter = formatters.get(output_format)
+    if not formatter:
+        raise ValueError(f"Unsupported output format: {output_format}")
+    
+    return formatter(
+        subreddit=analysis.subreddit,
         analysis=analysis,
         token_usage=None,
         cost=None,
     )
 
-    if output:
-        with open(output, "w") as f:
-            f.write(output_content)
+
+def write_output(content: str, output_file: Optional[str]) -> None:
+    """Write output to file or stdout.
+    
+    Args:
+        content: Content to write
+        output_file: Optional output file path
+    """
+    if output_file:
+        Path(output_file).write_text(content)
         console.print(
             Panel(
-                f"[bold green]✓ Results saved to:[/bold green] {output}",
+                f"[bold green]✓ Results saved to:[/bold green] {output_file}",
                 title="Success",
                 style="green",
             )
         )
     else:
         console.print("\n")
-        console.print(output_content)
+        console.print(content)
 
-    # Final summary
-    if verbose:
-        console.print("\n")
-        table = Table(title="Analysis Summary")
-        table.add_column("Metric", style="cyan")
-        table.add_column("Value", style="magenta")
-        table.add_row("Subreddits analyzed", str(len(analyzed_subreddits)))
-        table.add_row("Posts processed", str(len(all_posts)))
-        table.add_row("Comments processed", str(len(all_comments)))
-        table.add_row("Sentiment", analysis.sentiment)
-        console.print(table)
+
+def print_summary(ctx: AnalysisContext) -> None:
+    """Print analysis summary.
+    
+    Args:
+        ctx: Analysis context with results
+    """
+    if not ctx.analysis:
+        return
+        
+    table = Table(title="Analysis Summary")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="magenta")
+    table.add_row("Subreddits analyzed", str(len(ctx.analyzed_subreddits)))
+    table.add_row("Posts processed", str(len(ctx.all_posts)))
+    table.add_row("Comments processed", str(len(ctx.all_comments)))
+    table.add_row("Sentiment", ctx.analysis.sentiment)
+    
+    console.print("\n")
+    console.print(table)
 
     console.print(
         Panel(
             f"[bold green]✓ Analysis complete![/bold green]\n"
-            f"  Found {len(analysis.topics)} topics, "
-            f"{len(analysis.pain_points)} pain points, "
-            f"{len(analysis.questions)} questions",
+            f"  Found {len(ctx.analysis.topics)} topics, "
+            f"{len(ctx.analysis.pain_points)} pain points, "
+            f"{len(ctx.analysis.questions)} questions",
             title="Done",
             style="green",
         )
     )
 
 
+def run_analysis_pipeline(
+    reddit_config: RedditConfig,
+    openai_config: OpenAIConfig,
+    niche: str,
+    subreddits: Optional[str],
+    post_limit: int,
+    comment_limit: int,
+) -> AnalysisContext:
+    """Run the complete analysis pipeline.
+    
+    Args:
+        reddit_config: Reddit API configuration
+        openai_config: OpenAI API configuration
+        niche: Topic to analyze
+        subreddits: Optional comma-separated subreddit list
+        post_limit: Maximum posts per subreddit
+        comment_limit: Maximum comments per post
+        
+    Returns:
+        Analysis context with results
+        
+    Raises:
+        CLIError: If any step fails
+    """
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        transient=True,
+    ) as progress:
+        # Step 1: Discover subreddits
+        progress.add_task("[cyan]Discovering relevant subreddits...", total=None)
+        reddit_client = RedditClient(reddit_config)
+        subreddit_list = discover_subreddits(reddit_client, niche, subreddits)
+        logger.info(f"Discovered subreddits: {', '.join(subreddit_list)}")
+
+        # Step 2: Fetch data
+        progress.add_task(
+            f"[cyan]Fetching data from {len(subreddit_list)} subreddit(s)...",
+            total=len(subreddit_list),
+        )
+        all_posts, all_comments, analyzed_subreddits = fetch_subreddit_data(
+            reddit_client, subreddit_list, post_limit, comment_limit
+        )
+
+        # Step 3: Analyze with LLM
+        progress.add_task("[cyan]Analyzing with AI...", total=None)
+        analyzer = Analyzer(openai_config)
+        analysis = analyze_content(analyzer, niche, all_posts, all_comments)
+
+    return AnalysisContext(
+        niche=niche,
+        subreddit_list=subreddit_list,
+        all_posts=all_posts,
+        all_comments=all_comments,
+        analyzed_subreddits=analyzed_subreddits,
+        analysis=analysis,
+    )
+
+
 @app.command()
 def analyze(
-    niche: str = typer.Argument(
-        ...,
-        help="The niche or topic to analyze",
-    ),
+    niche: str = typer.Argument(..., help="The niche or topic to analyze"),
     subreddits: Optional[str] = typer.Option(
         None,
         "--subreddits",
         "-s",
-        help="Comma-separated list of subreddits to analyze (e.g., r/ai,r/machinelearning)",
+        help="Comma-separated list of subreddits (e.g., r/ai,r/machinelearning)",
     ),
     output: Optional[str] = typer.Option(
         None,
@@ -246,7 +358,7 @@ def analyze(
         50,
         "--limit",
         "-l",
-        help="Maximum number of posts to analyze per subreddit",
+        help="Maximum number of posts per subreddit",
     ),
     format: str = typer.Option(
         "markdown",
@@ -257,25 +369,28 @@ def analyze(
     model: str = typer.Option(
         "gpt-4o-mini",
         "--model",
-        help="OpenAI model to use for analysis",
+        help="OpenAI model to use",
     ),
     verbose: bool = typer.Option(
         False,
         "--verbose",
         "-v",
-        help="Enable verbose/debug output",
+        help="Enable verbose output",
     ),
 ):
     """Analyze Reddit trends for a given niche."""
-    # Get configuration
-    reddit_config, openai_config, app_config = get_config()
-    openai_config.model = model
-
+    # Configure logging
+    if verbose:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        )
+    
     # Validate configuration
-    if not validate_configuration(app_config, openai_config):
+    if not validate_configuration():
         raise typer.Exit(code=1)
 
-    # Validate output format
+    # Validate format
     if format not in ("markdown", "json"):
         console.print(
             Panel(
@@ -286,7 +401,11 @@ def analyze(
         )
         raise typer.Exit(code=1)
 
-    # Initialize clients
+    # Load configuration
+    reddit_config, openai_config, _ = get_config()
+    openai_config.model = model
+
+    # Display start message
     console.print(
         Panel(
             f"[bold cyan]TrendSleuth[/bold cyan] - Analyzing niche: [bold]{niche}[/bold]",
@@ -295,81 +414,55 @@ def analyze(
         )
     )
 
-    # Progress tracking
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        transient=True,
-    ) as progress:
-        # Step 1: Discover subreddits
-        task_id = progress.add_task(
-            "[cyan]Discovering relevant subreddits...",
-            total=None,
+    try:
+        # Run analysis pipeline
+        ctx = run_analysis_pipeline(
+            reddit_config=reddit_config,
+            openai_config=openai_config,
+            niche=niche,
+            subreddits=subreddits,
+            post_limit=limit,
+            comment_limit=limit * 2,
         )
 
-        reddit_client = RedditClient(reddit_config)
-        subreddit_list = discover_subreddits(
-            reddit_client, niche, subreddits, verbose
-        )
-        progress.update(task_id, completed=True)
+        # Format and write output
+        output_content = format_output(ctx.analysis, format)
+        write_output(output_content, output)
 
-        # Step 2: Fetch data from each subreddit
-        progress.add_task(
-            f"[cyan]Fetching data from {len(subreddit_list)} subreddit(s)...",
-            total=len(subreddit_list),
-        )
-
-        all_posts, all_comments, analyzed_subreddits = fetch_subreddit_data(
-            reddit_client, subreddit_list, limit, limit * 2, verbose
-        )
-
-        if not analyzed_subreddits:
+        # Print summary
+        if verbose:
+            print_summary(ctx)
+        else:
             console.print(
                 Panel(
-                    "[bold red]No data could be fetched. "
-                    "Check your Reddit API credentials and internet connection.",
-                    title="Error",
-                    style="red",
+                    f"[bold green]✓ Analysis complete![/bold green]\n"
+                    f"  Found {len(ctx.analysis.topics)} topics, "
+                    f"{len(ctx.analysis.pain_points)} pain points, "
+                    f"{len(ctx.analysis.questions)} questions",
+                    title="Done",
+                    style="green",
                 )
             )
-            raise typer.Exit(code=1)
 
-        progress.update(task_id, completed=True)
-
-        # Step 3: Analyze with LLM
-        progress.add_task(
-            "[cyan]Analyzing with AI...",
-            total=None,
+    except CLIError as e:
+        console.print(
+            Panel(
+                f"[bold red]{e}[/bold red]",
+                title="Error",
+                style="red",
+            )
         )
-
-        analyzer = Analyzer(openai_config)
-        analysis = analyze_content(analyzer, niche, all_posts, all_comments, verbose)
-
-        if not analysis:
-            console.print(
-                Panel(
-                    "[bold red]Failed to analyze the data. "
-                    "Please try again with more data or a different model.",
-                    title="Analysis Failed",
-                    style="red",
-                )
+        raise typer.Exit(code=1)
+    except Exception as e:
+        logger.exception("Unexpected error during analysis")
+        console.print(
+            Panel(
+                f"[bold red]Unexpected error: {e}[/bold red]",
+                title="Error",
+                style="red",
             )
-            raise typer.Exit(code=1)
-
-        progress.update(task_id, completed=True)
-
-    # Step 4: Format and output results
-    output_results(
-        niche,
-        analysis,
-        output,
-        format,
-        analyzed_subreddits,
-        all_posts,
-        all_comments,
-        verbose,
-    )
+        )
+        raise typer.Exit(code=1)
 
 
 @app.command()
@@ -382,7 +475,7 @@ def config(
 ):
     """Manage configuration."""
     if show:
-        reddit_config, openai_config, app_config = get_config()
+        reddit_config, openai_config, _ = get_config()
 
         table = Table(title="Current Configuration")
         table.add_column("Setting", style="cyan")
@@ -415,8 +508,7 @@ def main(
     ),
 ):
     """TrendSleuth - Reddit trend analysis for content creators."""
-    if ctx.invoked_subcommand is None and verbose:
-        console.print("[dim]Running in verbose mode...[/dim]")
+    pass
 
 
 if __name__ == "__main__":

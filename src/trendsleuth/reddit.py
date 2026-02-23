@@ -1,5 +1,6 @@
 """Reddit API client using PRAW for synchronous operations."""
 
+import logging
 import time
 import signal
 from typing import Optional
@@ -10,6 +11,8 @@ from praw.exceptions import RedditAPIException, PRAWException
 from prawcore.exceptions import PrawcoreException
 
 from trendsleuth.config import RedditConfig
+
+logger = logging.getLogger(__name__)
 
 
 class TimeoutError(Exception):
@@ -125,8 +128,7 @@ class RedditClient:
                 if hasattr(subreddit, 'display_name'):
                     subreddits.append(f"r/{subreddit.display_name}")
         except Exception as e:
-            console = __import__('rich.console').console.Console()
-            console.print(f"[yellow]Warning: Failed to search subreddits: {e}[/yellow]")
+            logger.warning(f"Failed to search subreddits for query '{query}': {e}")
         return list(dict.fromkeys(subreddits))[:limit]
     
     def get_subreddit_posts(
@@ -154,8 +156,7 @@ class RedditClient:
             )
             return list(posts)
         except Exception as e:
-            console = __import__('rich.console').Console()
-            console.print(f"[yellow]Warning: Failed to fetch posts from {subreddit_name}: {e}[/yellow]")
+            logger.warning(f"Failed to fetch posts from {subreddit_name}: {e}")
             return []
     
     def get_post_comments(
@@ -179,8 +180,7 @@ class RedditClient:
             comments = list(post.comments)[:limit]
             return [c for c in comments if hasattr(c, 'body') and c.body != "[deleted]"]
         except Exception as e:
-            console = __import__('rich.console').Console()
-            console.print(f"[yellow]Warning: Failed to fetch comments: {e}[/yellow]")
+            logger.warning(f"Failed to fetch comments for post {post.id}: {e}")
             return []
     
     def get_subreddit_data(
