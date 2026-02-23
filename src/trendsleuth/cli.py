@@ -10,6 +10,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 from rich.panel import Panel
 from rich.table import Table
 
+from trendsleuth import __version__
 from trendsleuth.config import (
     get_config,
     validate_env_vars,
