@@ -31,6 +31,11 @@ class AppConfig(BaseModel):
     # Rate limiting
     max_retries: int = 3
     retry_delay: float = 1.0
+    
+    # Timeouts
+    request_timeout: int = 30
+    search_timeout: int = 15
+    comment_timeout: int = 20
 
 
 def get_config() -> tuple[RedditConfig, OpenAIConfig, AppConfig]:
