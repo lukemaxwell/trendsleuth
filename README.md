@@ -31,19 +31,58 @@ TrendSleuth analyzes Reddit conversations to uncover emerging trends, pain point
 - Reddit API credentials
 - OpenAI API key
 
-### Setup
-
-1. **Install TrendSleuth:**
+### Quick Install (from PyPI)
 
 ```bash
 # Using pip
 pip install trendsleuth
 
-# Or using uv (recommended)
+# Or using pipx (recommended for CLI tools)
+pipx install trendsleuth
+
+# Or using uv
 uv tool install trendsleuth
 ```
 
-2. **Configure API Keys:**
+### Install from Source
+
+If you want the latest development version:
+
+```bash
+# Clone the repository
+git clone https://github.com/lukemaxwell/trendsleuth.git
+cd trendsleuth
+
+# Install with uv (recommended)
+uv sync
+
+# Activate the virtual environment
+source .venv/bin/activate  # Linux/macOS
+# or
+.venv\Scripts\activate     # Windows
+
+# Install in development mode
+uv pip install -e .
+```
+
+**Alternative: Install from source with pip**
+
+```bash
+# Clone the repository
+git clone https://github.com/lukemaxwell/trendsleuth.git
+cd trendsleuth
+
+# Create a virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+# or
+.venv\Scripts\activate     # Windows
+
+# Install dependencies
+pip install -e .
+```
+
+### Configure API Keys
 
 ```bash
 # Set environment variables
@@ -183,6 +222,7 @@ Options:
 ```
 
 #### Ideas Command
+It is highly recommended to use the best models available for idea generation, e.g. gpt-5.2.
 
 ```
 Usage: trendsleuth ideas [OPTIONS]
@@ -388,14 +428,16 @@ $ trendsleuth ideas --input analysis.json --type content --count 1
 
 ## Development
 
-### Setup for Contributors
+### Contributing
+
+If you want to contribute to TrendSleuth development, follow these steps:
 
 ```bash
 # Clone the repository
 git clone https://github.com/lukemaxwell/trendsleuth.git
 cd trendsleuth
 
-# Install with uv
+# Install with uv (recommended for development)
 uv sync
 
 # Activate the virtual environment
@@ -403,9 +445,10 @@ source .venv/bin/activate  # Linux/macOS
 # or
 .venv\Scripts\activate     # Windows
 
-# Install in development mode
-uv pip install -e .
+# The project is automatically installed in editable mode
 ```
+
+**Note:** The installation instructions above already install TrendSleuth in development mode (`-e` flag), so you don't need to do anything extra.
 
 ### Running Tests
 
