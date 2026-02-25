@@ -8,6 +8,8 @@
 
 TrendSleuth analyzes Reddit conversations to uncover emerging trends, pain points, and unanswered questions and turns those insights into actionable content, product, and business ideas.
 
+![Anaylsis screenshot](trendsleuth-analysis.png)
+
 ## Features
 
 - 🔍 **Auto-discover subreddits** - Find relevant communities for your niche
