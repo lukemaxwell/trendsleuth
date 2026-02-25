@@ -96,7 +96,7 @@ def fetch_search_result_urls(
     brave_config: BraveConfig,
     search_config: WebSearchConfig,
     progress: Progress,
-    ignore_urls: set[str] | None,
+    ignore_urls: set[str] | None = None,
 ) -> set[str]:
     """Fetch search result urls for a list of queries.
 
@@ -110,6 +110,7 @@ def fetch_search_result_urls(
     Returns:
         Set of URLs
     """
+    ignore_urls = ignore_urls or set()
     task_id = progress.add_task("[cyan]Performing web search...", total=len(queries))
     brave_client = BraveClient(brave_config)
     # Collect URLs
