@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.4] - 2026-02-25
+## [0.1.5] - 2026-02-25
 
 ### Fixed
 - Screenshot image in README now uses full GitHub raw URL for PyPI compatibility
 - PyPI package page now displays the screenshot correctly
+
+## [0.1.4] - 2026-02-25
+
+### Note
+- Release failed due to uv.lock version mismatch (published as 0.1.3)
+- Fixed in 0.1.5
 
 ## [0.1.3] - 2026-02-25
 
