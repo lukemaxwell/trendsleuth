@@ -49,6 +49,17 @@ def format_markdown(
         lines.append(f"{i}. {question}")
     lines.append("")
     
+    # Evidence section if present
+    if analysis.evidence:
+        lines.extend([
+            "## Evidence (Recent)\n",
+        ])
+        for evidence_item in analysis.evidence:
+            date_str = evidence_item.date if evidence_item.date else "unknown"
+            source_label = "WEB" if evidence_item.source == "web" else "REDDIT"
+            lines.append(f"- [{date_str}] [{source_label}] \"{evidence_item.quote}\" — {evidence_item.url}")
+        lines.append("")
+    
     # Metadata
     if token_usage or cost is not None:
         lines.extend([
@@ -82,6 +93,18 @@ def format_json(
             "sentiment": analysis.sentiment,
         },
     }
+    
+    # Add evidence if present
+    if analysis.evidence:
+        result["analysis"]["evidence"] = [
+            {
+                "source": evidence_item.source,
+                "quote": evidence_item.quote,
+                "url": evidence_item.url,
+                "date": evidence_item.date,
+            }
+            for evidence_item in analysis.evidence
+        ]
     
     if token_usage:
         result["token_usage"] = token_usage

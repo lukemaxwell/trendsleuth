@@ -21,6 +21,13 @@ class OpenAIConfig(BaseModel):
     model: str = "gpt-4o-mini"
 
 
+class BraveConfig(BaseModel):
+    """Configuration for Brave Search API access."""
+
+    api_key: str = Field(default_factory=lambda: os.environ.get("BRAVE_API_KEY", ""))
+    rate_limit_rps: float = 1.0
+
+
 class AppConfig(BaseModel):
     """Main application configuration."""
 
@@ -38,12 +45,13 @@ class AppConfig(BaseModel):
     comment_timeout: int = 20
 
 
-def get_config() -> tuple[RedditConfig, OpenAIConfig, AppConfig]:
+def get_config() -> tuple[RedditConfig, OpenAIConfig, AppConfig, BraveConfig]:
     """Get all configuration objects."""
     reddit_config = RedditConfig()
     openai_config = OpenAIConfig()
     app_config = AppConfig()
-    return reddit_config, openai_config, app_config
+    brave_config = BraveConfig()
+    return reddit_config, openai_config, app_config, brave_config
 
 
 def validate_env_vars() -> list[str]:
@@ -56,3 +64,12 @@ def validate_env_vars() -> list[str]:
     if not os.environ.get("OPENAI_API_KEY"):
         missing.append("OPENAI_API_KEY")
     return missing
+
+
+def validate_brave_env() -> bool:
+    """Check if Brave API key is configured.
+    
+    Returns:
+        True if BRAVE_API_KEY is set
+    """
+    return bool(os.environ.get("BRAVE_API_KEY"))

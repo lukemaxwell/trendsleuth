@@ -11,7 +11,10 @@ TrendSleuth helps content creators discover trending topics, pain points, and qu
 
 - 🔍 **Auto-discover subreddits** - Find relevant communities for your niche
 - 📊 **AI-powered analysis** - Extract topics, pain points, and questions
+- 🔗 **Evidence collection** - Gather verbatim quotes from Reddit and web sources
+- 💡 **Niche generation** - Generate specific niche ideas for any theme
 - 📝 **Markdown & JSON output** - Get results in your preferred format
+- 🌐 **Web evidence** - Search the web using Brave Search API for additional insights
 - 💰 **Cost tracking** - See token usage and estimated API costs
 - 🚀 **Fast & efficient** - Process hundreds of posts and comments quickly
 - 📺 **Rich terminal UI** - Beautiful progress indicators and results
@@ -44,21 +47,36 @@ export REDDIT_CLIENT_ID="your_reddit_client_id"
 export REDDIT_CLIENT_SECRET="your_reddit_client_secret"
 export REDDIT_USER_AGENT="TrendSleuth/0.1.0"
 export OPENAI_API_KEY="your_openai_api_key"
+
+# Optional: For web evidence gathering
+export BRAVE_API_KEY="your_brave_api_key"
 ```
 
 **Get API Credentials:**
 - **Reddit:** Create an app at [https://www.reddit.com/prefs/apps](https://www.reddit.com/prefs/apps)
 - **OpenAI:** Get an API key at [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+- **Brave Search (optional):** Sign up at [https://brave.com/search/api/](https://brave.com/search/api/)
 
 ## Usage
 
-### Basic Analysis
+### Analyze Trends
 
+Basic trend analysis:
 ```bash
 trendsleuth analyze "ai agents"
 ```
 
-### Advanced Options
+With evidence from Reddit:
+```bash
+trendsleuth analyze "ai agents" --include-evidence
+```
+
+With web evidence from Brave Search:
+```bash
+trendsleuth analyze "ai agents" --include-evidence --include-web
+```
+
+### Advanced Analysis Options
 
 ```bash
 # Analyze specific subreddits
@@ -69,16 +87,39 @@ trendsleuth analyze "machine learning" \
 trendsleuth analyze "content creation" \
   --output report.md
 
-# Get JSON output
+# Get JSON output with evidence
 trendsleuth analyze "photography" \
-  --format json
+  --format json \
+  --include-evidence
 
-# Adjust analysis depth
+# Adjust analysis depth and web evidence
 trendsleuth analyze "gaming" \
-  --limit 100
+  --limit 100 \
+  --include-web \
+  --web-evidence-limit 20 \
+  --web-results-per-query 10
+```
+
+### Generate Niche Ideas
+
+Generate niche ideas for a theme:
+```bash
+trendsleuth niches --theme "productivity"
+```
+
+With custom count:
+```bash
+trendsleuth niches --theme "fitness" --count 25
+```
+
+JSON output:
+```bash
+trendsleuth niches --theme "travel" --json
 ```
 
 ### Full Command Reference
+
+#### Analyze Command
 
 ```
 Usage: trendsleuth analyze [OPTIONS] NICHE
@@ -87,13 +128,31 @@ Arguments:
   NICHE              The niche or topic to analyze
 
 Options:
-  -s, --subreddits TEXT     Comma-separated list of subreddits
-  -o, --output PATH         Output file path
-  -l, --limit INTEGER       Maximum posts to analyze (default: 50)
-  -f, --format [markdown|json]  Output format (default: markdown)
-  --model TEXT              OpenAI model (default: gpt-4o-mini)
-  -v, --verbose             Enable verbose output
-  --help                    Show this message and exit
+  -s, --subreddits TEXT          Comma-separated list of subreddits
+  -o, --output PATH              Output file path
+  -l, --limit INTEGER            Maximum posts to analyze (default: 50)
+  -f, --format [markdown|json]   Output format (default: markdown)
+  --model TEXT                   OpenAI model (default: gpt-4o-mini)
+  --include-evidence             Include evidence with verbatim quotes
+  --include-web                  Gather web evidence using Brave Search
+  --web-evidence-limit INTEGER   Max web evidence items (default: 15)
+  --web-results-per-query INT    Brave results per query (default: 5)
+  --web-rate-limit-rps FLOAT     Brave API rate limit RPS (default: 1.0)
+  -v, --verbose                  Enable verbose output
+  --help                         Show this message and exit
+```
+
+#### Niches Command
+
+```
+Usage: trendsleuth niches [OPTIONS]
+
+Options:
+  --theme TEXT         Topic or domain to generate niches for (required)
+  --count INTEGER      Number of niches to generate (default: 15)
+  --json               Output as JSON array
+  --model TEXT         OpenAI model (default: gpt-4o-mini)
+  --help               Show this message and exit
 ```
 
 ### Configuration Commands
@@ -150,6 +209,12 @@ about accessibility and implementation complexity.
 6. What security measures are essential?
 7. Are there enterprise-grade AI agent solutions?
 
+## Evidence (Recent)
+
+- [2024-02-20] [REDDIT] "The setup process is way too complicated for beginners..." — https://reddit.com/r/ai/...
+- [2024-02-19] [WEB] "Cost management is a huge issue when running multiple agents..." — https://example.com/...
+- [unknown] [WEB] "Documentation is severely lacking for most frameworks." — https://example.com/...
+
 ## Metrics
 
 - **Total tokens used:** 12,345
@@ -203,7 +268,10 @@ trendsleuth/
 │   ├── config.py       # Configuration management
 │   ├── reddit.py       # Reddit API client
 │   ├── analyzer.py     # LLM-based analysis
-│   └── formatter.py    # Output formatting
+│   ├── formatter.py    # Output formatting
+│   ├── brave.py        # Brave Search API client
+│   ├── web_scraper.py  # Web page text extraction
+│   └── web_evidence.py # Web evidence gathering
 ├── tests/
 │   ├── test_reddit.py
 │   ├── test_analyzer.py

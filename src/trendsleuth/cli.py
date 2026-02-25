@@ -1,6 +1,8 @@
 """CLI entry point for TrendSleuth."""
 
+import json
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -12,7 +14,13 @@ from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from trendsleuth.analyzer import Analyzer, TrendAnalysis
-from trendsleuth.config import OpenAIConfig, RedditConfig, get_config, validate_env_vars
+from trendsleuth.config import (
+    OpenAIConfig,
+    RedditConfig,
+    get_config,
+    validate_env_vars,
+    validate_brave_env,
+)
 from trendsleuth.formatter import format_json, format_markdown
 from trendsleuth.reddit import RedditClient
 
@@ -160,6 +168,7 @@ def analyze_content(
     niche: str,
     posts: list,
     comments: list,
+    include_evidence: bool = False,
 ) -> TrendAnalysis:
     """Analyze the collected content with the LLM.
     
@@ -168,6 +177,7 @@ def analyze_content(
         niche: Topic being analyzed
         posts: List of Reddit posts
         comments: List of Reddit comments
+        include_evidence: If True, include evidence with quotes and URLs
         
     Returns:
         Analysis results
@@ -188,6 +198,7 @@ def analyze_content(
         subreddit_name=f"r/{niche.replace(' ', '-')}",
         posts=posts[:20],
         comments=comments[:200],
+        include_evidence=include_evidence,
     )
 
     if not analysis:
@@ -288,6 +299,11 @@ def run_analysis_pipeline(
     subreddits: Optional[str],
     post_limit: int,
     comment_limit: int,
+    include_evidence: bool = False,
+    include_web: bool = False,
+    web_evidence_limit: int = 15,
+    web_results_per_query: int = 5,
+    web_rate_limit_rps: float = 1.0,
 ) -> AnalysisContext:
     """Run the complete analysis pipeline.
     
@@ -298,6 +314,11 @@ def run_analysis_pipeline(
         subreddits: Optional comma-separated subreddit list
         post_limit: Maximum posts per subreddit
         comment_limit: Maximum comments per post
+        include_evidence: If True, include evidence with quotes and URLs
+        include_web: If True, gather web evidence using Brave Search
+        web_evidence_limit: Maximum web evidence items to collect
+        web_results_per_query: Brave results per query
+        web_rate_limit_rps: Brave API rate limit (requests per second)
         
     Returns:
         Analysis context with results
@@ -329,7 +350,47 @@ def run_analysis_pipeline(
         # Step 3: Analyze with LLM
         progress.add_task("[cyan]Analyzing with AI...", total=None)
         analyzer = Analyzer(openai_config)
-        analysis = analyze_content(analyzer, niche, all_posts, all_comments)
+        analysis = analyze_content(analyzer, niche, all_posts, all_comments, include_evidence)
+        
+        # Step 4: Gather web evidence if requested
+        if include_web:
+            from trendsleuth.config import BraveConfig
+            from trendsleuth.web_evidence import gather_web_evidence, WebEvidenceConfig
+            
+            progress.add_task("[cyan]Gathering web evidence...", total=None)
+            
+            # Extract Reddit URLs from posts for deduplication
+            reddit_urls = set()
+            for post in all_posts:
+                if hasattr(post, 'permalink'):
+                    reddit_urls.add(f"https://reddit.com{post.permalink}")
+            
+            brave_config = BraveConfig(
+                api_key=os.environ.get("BRAVE_API_KEY", ""),
+                rate_limit_rps=web_rate_limit_rps,
+            )
+            
+            web_config = WebEvidenceConfig(
+                evidence_limit=web_evidence_limit,
+                results_per_query=web_results_per_query,
+            )
+            
+            web_evidence = gather_web_evidence(
+                niche=niche,
+                pain_points=analysis.pain_points,
+                questions=analysis.questions,
+                topics=analysis.topics,
+                brave_config=brave_config,
+                web_config=web_config,
+                analyzer=analyzer,
+                reddit_urls=reddit_urls,
+            )
+            
+            # Merge web evidence with existing evidence
+            if analysis.evidence:
+                analysis.evidence.extend(web_evidence)
+            else:
+                analysis.evidence = web_evidence
 
     return AnalysisContext(
         niche=niche,
@@ -373,6 +434,31 @@ def analyze(
         "--model",
         help="OpenAI model to use",
     ),
+    include_evidence: bool = typer.Option(
+        False,
+        "--include-evidence",
+        help="Include evidence section with verbatim quotes and URLs",
+    ),
+    include_web: bool = typer.Option(
+        False,
+        "--include-web",
+        help="Gather web evidence using Brave Search (requires BRAVE_API_KEY)",
+    ),
+    web_evidence_limit: int = typer.Option(
+        15,
+        "--web-evidence-limit",
+        help="Maximum number of web evidence items to collect",
+    ),
+    web_results_per_query: int = typer.Option(
+        5,
+        "--web-results-per-query",
+        help="Number of Brave search results per query",
+    ),
+    web_rate_limit_rps: float = typer.Option(
+        1.0,
+        "--web-rate-limit-rps",
+        help="Brave API rate limit (requests per second)",
+    ),
     verbose: bool = typer.Option(
         False,
         "--verbose",
@@ -391,6 +477,19 @@ def analyze(
     # Validate configuration
     if not validate_configuration():
         raise typer.Exit(code=1)
+    
+    # Check Brave API key if web evidence requested
+    if include_web and not validate_brave_env():
+        console.print(
+            Panel(
+                "[bold red]Missing BRAVE_API_KEY environment variable[/bold red]\n\n"
+                "The --include-web flag requires a Brave Search API key.\n"
+                "Please set BRAVE_API_KEY in your environment or .env file.",
+                title="Configuration Error",
+                style="red",
+            )
+        )
+        raise typer.Exit(code=1)
 
     # Validate format
     if output_format not in ("markdown", "json"):
@@ -404,7 +503,7 @@ def analyze(
         raise typer.Exit(code=1)
 
     # Load configuration
-    reddit_config, openai_config, _ = get_config()
+    reddit_config, openai_config, _, _ = get_config()
     openai_config.model = model
 
     # Display start message
@@ -425,6 +524,11 @@ def analyze(
             subreddits=subreddits,
             post_limit=limit,
             comment_limit=limit * 2,
+            include_evidence=include_evidence,
+            include_web=include_web,
+            web_evidence_limit=web_evidence_limit,
+            web_results_per_query=web_results_per_query,
+            web_rate_limit_rps=web_rate_limit_rps,
         )
 
         # Format and write output
@@ -456,6 +560,84 @@ def analyze(
 
 
 @app.command()
+def niches(
+    theme: str = typer.Option(
+        ...,
+        "--theme",
+        help="Topic or domain to generate niches within (required)",
+    ),
+    count: int = typer.Option(
+        15,
+        "--count",
+        help="Number of niches to generate",
+    ),
+    output_json: bool = typer.Option(
+        False,
+        "--json",
+        help="Output as JSON array",
+    ),
+    model: str = typer.Option(
+        "gpt-4o-mini",
+        "--model",
+        help="OpenAI model to use",
+    ),
+):
+    """Generate niche ideas for a given theme."""
+    # Validate configuration (only need OpenAI)
+    missing = validate_env_vars()
+    openai_missing = [var for var in missing if var.startswith("OPENAI_")]
+    if openai_missing:
+        console.print(
+            Panel(
+                f"[bold red]Missing required environment variables:[/bold red]\n"
+                f"  {', '.join(openai_missing)}\n\n"
+                "[bold]Please set these in your environment or .env file.",
+                title="Configuration Error",
+                style="red",
+            )
+        )
+        raise typer.Exit(code=1)
+    
+    # Load configuration
+    _, openai_config, _, _ = get_config()
+    openai_config.model = model
+    
+    try:
+        # Generate niches
+        analyzer = Analyzer(openai_config)
+        niche_list = analyzer.generate_niches(theme=theme, count=count)
+        
+        if not niche_list:
+            console.print(
+                Panel(
+                    "[bold red]Failed to generate niches.[/bold red]\n"
+                    "Please try again or check your API credentials.",
+                    title="Error",
+                    style="red",
+                )
+            )
+            raise typer.Exit(code=1)
+        
+        # Output results
+        if output_json:
+            print(json.dumps(niche_list, indent=2))
+        else:
+            for niche in niche_list:
+                print(niche)
+    
+    except Exception as e:
+        logger.exception("Unexpected error generating niches")
+        console.print(
+            Panel(
+                f"[bold red]Unexpected error: {e}[/bold red]",
+                title="Error",
+                style="red",
+            )
+        )
+        raise typer.Exit(code=1)
+
+
+@app.command()
 def config(
     show: bool = typer.Option(
         False,
@@ -465,7 +647,7 @@ def config(
 ):
     """Manage configuration."""
     if show:
-        reddit_config, openai_config, _ = get_config()
+        reddit_config, openai_config, _, brave_config = get_config()
 
         table = Table(title="Current Configuration")
         table.add_column("Setting", style="cyan")
