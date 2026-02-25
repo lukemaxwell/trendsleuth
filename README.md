@@ -202,7 +202,9 @@ Options:
 trendsleuth config --show
 ```
 
-## Output Example
+## Output Examples
+
+### Analyze Command Output
 
 ```
 # Trend Analysis: ai agents
@@ -259,6 +261,128 @@ about accessibility and implementation complexity.
 
 - **Total tokens used:** 12,345
 - **Estimated cost:** $0.0315
+```
+
+### Niches Command Output
+
+```bash
+$ trendsleuth niches --theme "productivity" --count 5
+```
+
+```
+1. AI-powered meeting summarization tools
+2. Focus mode apps for remote workers
+3. Habit tracking with behavioral psychology
+4. Time blocking calendars for ADHD users
+5. Automated workflow builders for solopreneurs
+```
+
+With JSON output:
+```bash
+$ trendsleuth niches --theme "productivity" --count 3 --json
+```
+
+```json
+[
+  "AI-powered meeting summarization tools",
+  "Focus mode apps for remote workers",
+  "Habit tracking with behavioral psychology"
+]
+```
+
+### Ideas Command Output
+
+```bash
+$ trendsleuth ideas --input analysis.json --type business --count 2
+```
+
+```markdown
+## Idea 1
+
+**AgentStack Pro**
+
+_All-in-one platform for deploying and managing AI agents at scale_
+
+**Target Customer:** Mid-size companies (50-500 employees) wanting to implement AI agents without hiring specialized ML engineers
+
+**Core Pain:** High computational costs and complex setup make AI agents inaccessible to most businesses
+
+**Product:** Managed platform that handles infrastructure, provides pre-built agent templates, and includes monitoring/cost optimization tools
+
+**Why Existing Solutions Fail:** Current solutions require deep technical expertise and force companies to build everything from scratch
+
+**Monetization:** Usage-based pricing with enterprise support tiers
+
+**Pricing:** Free tier (1 agent, 10k messages/month), Pro at $99/month (5 agents, 100k messages), Enterprise custom pricing
+
+**Validation Strategy:** Launch with 3 pre-built agent templates (customer support, sales assistant, content writer). Partner with 5 beta companies for case studies. Success metric: 50+ signups in first month with 20% converting to paid.
+
+## Idea 2
+
+**Agent Cost Optimizer**
+
+_SaaS tool that automatically reduces AI agent operational costs by 40-60%_
+
+**Target Customer:** Companies already running AI agents who are struggling with unpredictable and high costs
+
+**Core Pain:** Cost management is a huge challenge when running multiple agents with different LLM providers
+
+**Product:** Dashboard that analyzes agent usage patterns, recommends model optimizations, implements caching strategies, and auto-routes queries to most cost-effective models
+
+**Why Existing Solutions Fail:** No dedicated tools exist for AI agent cost optimization - companies do this manually and miss significant savings
+
+**Monetization:** Revenue share model - we take 20% of the savings we generate
+
+**Pricing:** Free audit, then 20% of monthly savings (minimum $299/month)
+
+**Validation Strategy:** Offer free cost audits to 20 companies from r/LocalLLaMA and r/ArtificialIntelligence. Show concrete savings projections. Success metric: 5+ companies sign LOIs.
+```
+
+App ideas output:
+```bash
+$ trendsleuth ideas --input analysis.md --type app --count 1
+```
+
+```markdown
+## Idea 1
+
+**AgentLab**
+
+**Target User:** Developers and technical founders who want to experiment with AI agents without infrastructure overhead
+
+**Problem:** Setting up AI agent development environments is complex, time-consuming, and expensive
+
+**Core Features:**
+- One-click agent templates (customer service, research, coding assistant)
+- Visual workflow builder for agent orchestration
+- Built-in testing sandbox with mock data
+- Cost tracking per agent and per conversation
+- One-click deployment to production
+
+**Unique Value:** Get from idea to working agent prototype in under 30 minutes without touching infrastructure code
+
+**MVP Scope:** Build template system with 3 pre-configured agents, basic visual editor, and local testing. No deployment features in MVP. 8-10 weeks to ship.
+
+**Monetization:** Free tier (local testing only), Pro $29/month (cloud hosting, 10k messages), Team $99/month (unlimited)
+```
+
+Content ideas output:
+```bash
+$ trendsleuth ideas --input analysis.json --type content --count 1
+```
+
+```markdown
+## Idea 1
+
+**I spent $12,000 on AI agents so you don't have to: The brutal truth about costs**
+
+**Format:** Long-form Twitter/X thread (15-20 tweets) with cost breakdown screenshots
+
+**Target Audience:** Founders, indie hackers, and developers considering implementing AI agents
+
+**Angle:** Expose the hidden costs everyone ignores: API fees compound fast, memory/context management is expensive, failed requests still cost money, and most agents are over-engineered. Share exact cost breakdowns and lessons learned.
+
+**Why It Works:** Combines fear (cost warnings) + value (concrete data) + authority (real experience). Screenshots of bills make it credible. Helps people avoid expensive mistakes. High save/share potential from people wanting to reference it later.
 ```
 
 ## Development
