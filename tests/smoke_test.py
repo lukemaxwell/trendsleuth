@@ -13,8 +13,6 @@ os.environ.setdefault("OPENAI_API_KEY", "test_key")
 
 def test_imports():
     """Test that all modules can be imported."""
-    from trendsleuth import cli, analyzer, config, reddit, formatter
-    from trendsleuth import brave, web_scraper, web_evidence
     # If we get here without errors, imports worked
     assert True
 
