@@ -134,7 +134,7 @@ def gather_web_evidence(
     logger.info(f"Found {len(all_urls)} unique URLs (after deduplication)")
 
     # Fetch and extract quotes
-    evidence_items = []
+    evidence_items: list[Evidence] = []
     for url in all_urls:
         if len(evidence_items) >= web_config.evidence_limit:
             break

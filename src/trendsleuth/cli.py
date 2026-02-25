@@ -215,12 +215,13 @@ def analyze_content(
     return analysis
 
 
-def format_output(analysis: TrendAnalysis, output_format: str) -> str:
+def format_output(analysis: TrendAnalysis, output_format: str, subreddit: str) -> str:
     """Format the analysis results.
 
     Args:
         analysis: Analysis results
         output_format: Output format ('markdown' or 'json')
+        subreddit: Subreddit name or niche
 
     Returns:
         Formatted output string
@@ -235,7 +236,7 @@ def format_output(analysis: TrendAnalysis, output_format: str) -> str:
         raise ValueError(f"Unsupported output format: {output_format}")
 
     return formatter(
-        subreddit=analysis.subreddit,
+        subreddit=subreddit,
         analysis=analysis,
         token_usage=None,
         cost=None,
@@ -539,8 +540,9 @@ def analyze(
         )
 
         # Format and write output
-        output_content = format_output(ctx.analysis, output_format)
-        write_output(output_content, output_file)
+        if ctx.analysis is not None:
+            output_content = format_output(ctx.analysis, output_format, ctx.niche)
+            write_output(output_content, output_file)
 
         # Print summary
         print_summary(ctx, verbose=verbose)

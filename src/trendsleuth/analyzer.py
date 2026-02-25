@@ -6,7 +6,7 @@ from datetime import datetime
 
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 from langchain_core.output_parsers import PydanticOutputParser
 
 from trendsleuth.config import OpenAIConfig
@@ -56,7 +56,7 @@ class Analyzer:
         self.config = config
         self.model = ChatOpenAI(
             model=self.config.model,
-            api_key=self.config.api_key,
+            api_key=SecretStr(self.config.api_key),  # type: ignore[arg-type]
             temperature=0.7,
         )
         self.parser = PydanticOutputParser(pydantic_object=TrendAnalysis)

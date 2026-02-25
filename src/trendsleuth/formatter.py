@@ -1,7 +1,7 @@
 """Output formatting for trend analysis results."""
 
 import json
-from typing import Optional
+from typing import Optional, Any
 
 from trendsleuth.analyzer import TrendAnalysis
 
@@ -98,7 +98,7 @@ def format_json(
     cost: Optional[float] = None,
 ) -> str:
     """Format analysis results as JSON."""
-    result = {
+    result: dict[str, Any] = {
         "subreddit": subreddit,
         "timestamp": get_timestamp(),
         "analysis": {

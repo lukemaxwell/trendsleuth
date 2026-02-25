@@ -8,15 +8,9 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from trendsleuth.config import BraveConfig
+
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class BraveConfig:
-    """Configuration for Brave Search API."""
-
-    api_key: str
-    rate_limit_rps: float = 1.0  # Requests per second
 
 
 @dataclass
@@ -40,8 +34,8 @@ class BraveClient:
             config: Brave API configuration
         """
         self.config = config
-        self.last_request_time = 0
-        self.min_interval = 1.0 / config.rate_limit_rps
+        self.last_request_time: float = 0.0
+        self.min_interval: float = 1.0 / config.rate_limit_rps
 
         # Setup session with retries
         self.session = requests.Session()

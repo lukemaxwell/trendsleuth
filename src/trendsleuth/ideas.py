@@ -8,7 +8,7 @@ from typing import Optional
 
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 from langchain_core.output_parsers import PydanticOutputParser
 
 from trendsleuth.config import OpenAIConfig
@@ -249,7 +249,7 @@ def _generate_business_ideas(
     """Generate business ideas."""
     model = ChatOpenAI(
         model=config.model,
-        api_key=config.api_key,
+        api_key=SecretStr(config.api_key),  # type: ignore[arg-type]
         temperature=0.8,
     )
 
@@ -314,7 +314,7 @@ def _generate_app_ideas(
     """Generate app/product ideas."""
     model = ChatOpenAI(
         model=config.model,
-        api_key=config.api_key,
+        api_key=SecretStr(config.api_key),  # type: ignore[arg-type]
         temperature=0.8,
     )
 
@@ -377,7 +377,7 @@ def _generate_content_ideas(
     """Generate content ideas."""
     model = ChatOpenAI(
         model=config.model,
-        api_key=config.api_key,
+        api_key=SecretStr(config.api_key),  # type: ignore[arg-type]
         temperature=0.9,
     )
 
