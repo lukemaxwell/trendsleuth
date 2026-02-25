@@ -5,10 +5,10 @@ import time
 import signal
 from typing import Optional
 
-import praw
-from praw.models import Submission, Comment
-from praw.exceptions import RedditAPIException, PRAWException
-from prawcore.exceptions import PrawcoreException
+import praw  # type: ignore[import-untyped]
+from praw.models import Submission, Comment  # type: ignore[import-untyped]
+from praw.exceptions import RedditAPIException, PRAWException  # type: ignore[import-untyped]
+from prawcore.exceptions import PrawcoreException  # type: ignore[import-untyped]
 
 from trendsleuth.config import RedditConfig
 

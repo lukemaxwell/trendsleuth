@@ -84,7 +84,7 @@ class BraveClient:
 
         params = {
             "q": query,
-            "count": count,
+            "count": str(count),
         }
 
         try:
@@ -92,7 +92,7 @@ class BraveClient:
             response = self.session.get(
                 self.BASE_URL,
                 headers=headers,
-                params=params,
+                params=params,  # type: ignore[arg-type]
                 timeout=timeout,
             )
             response.raise_for_status()
