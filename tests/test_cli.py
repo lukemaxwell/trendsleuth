@@ -3,6 +3,8 @@
 import json
 import pytest
 from unittest.mock import Mock, patch
+
+from rich.progress import Progress
 from typer.testing import CliRunner
 
 from trendsleuth.cli import (
@@ -20,7 +22,7 @@ from trendsleuth.cli import (
 )
 from trendsleuth.config import RedditConfig, OpenAIConfig
 from trendsleuth.analyzer import TrendAnalysis
-
+from trendsleuth.reddit import RedditClient
 
 runner = CliRunner()
 
@@ -59,29 +61,31 @@ class TestDiscoverSubreddits:
         """Create a mock Reddit client."""
         return Mock()
 
-    def test_with_explicit_subreddits(self, mock_reddit_client):
+    def test_with_explicit_subreddits(self, mock_reddit_client, mock_progress):
         """Test when subreddits are explicitly provided."""
         result = discover_subreddits(
             mock_reddit_client,
             niche="AI",
             subreddits="r/ai,r/machinelearning,r/artificial",
+            progress=mock_progress,
         )
 
         assert result == ["r/ai", "r/machinelearning", "r/artificial"]
         mock_reddit_client.search_subreddits.assert_not_called()
 
-    def test_with_explicit_subreddits_whitespace(self, mock_reddit_client):
+    def test_with_explicit_subreddits_whitespace(self, mock_reddit_client, mock_progress):
         """Test explicit subreddits with extra whitespace."""
         result = discover_subreddits(
             mock_reddit_client,
             niche="AI",
             subreddits=" r/ai , r/machinelearning , r/artificial ",
+            progress=mock_progress,
         )
 
         assert result == ["r/ai", "r/machinelearning", "r/artificial"]
 
     @patch("trendsleuth.cli.console")
-    def test_discover_from_niche(self, mock_console, mock_reddit_client):
+    def test_discover_from_niche(self, mock_console, mock_reddit_client, mock_progress):
         """Test discovering subreddits from niche."""
         mock_reddit_client.search_subreddits.return_value = [
             "r/ai",
@@ -91,7 +95,7 @@ class TestDiscoverSubreddits:
             "r/deeplearning",
         ]
 
-        result = discover_subreddits(mock_reddit_client, niche="AI", subreddits=None)
+        result = discover_subreddits(mock_reddit_client, niche="AI", subreddits=None, progress=mock_progress)
 
         assert result == [
             "r/ai",
@@ -101,28 +105,22 @@ class TestDiscoverSubreddits:
             "r/deeplearning",
         ]
         mock_reddit_client.search_subreddits.assert_called_once_with("AI", limit=5)
-        mock_console.print.assert_called_once()
 
     @patch("trendsleuth.cli.console")
-    def test_discover_no_results(self, mock_console, mock_reddit_client):
+    def test_discover_no_results(self, mock_console, mock_reddit_client, mock_progress):
         """Test when no subreddits are found."""
         mock_reddit_client.search_subreddits.return_value = []
 
         with pytest.raises(CLIError, match="No subreddits found"):
             discover_subreddits(
-                mock_reddit_client, niche="NonexistentNiche", subreddits=None
+                mock_reddit_client, niche="NonexistentNiche", subreddits=None, progress=mock_progress
             )
 
 
 class TestFetchSubredditData:
     """Tests for fetch_subreddit_data function."""
 
-    @pytest.fixture
-    def mock_reddit_client(self):
-        """Create a mock Reddit client."""
-        return Mock()
-
-    def test_fetch_from_single_subreddit(self, mock_reddit_client):
+    def test_fetch_from_single_subreddit(self, mock_reddit_client, mock_progress):
         """Test fetching data from a single subreddit."""
         mock_reddit_client.get_subreddit_data.return_value = {
             "posts": [{"title": "Post 1"}, {"title": "Post 2"}],
@@ -130,7 +128,7 @@ class TestFetchSubredditData:
         }
 
         all_posts, all_comments, analyzed = fetch_subreddit_data(
-            mock_reddit_client, ["r/test"], post_limit=10, comment_limit=20
+            mock_reddit_client, ["r/test"], post_limit=10, comment_limit=20, progress=mock_progress
         )
 
         assert len(all_posts) == 2
@@ -140,7 +138,7 @@ class TestFetchSubredditData:
             "r/test", post_limit=10, comment_limit=20
         )
 
-    def test_fetch_from_multiple_subreddits(self, mock_reddit_client):
+    def test_fetch_from_multiple_subreddits(self, mock_reddit_client, mock_progress):
         """Test fetching data from multiple subreddits."""
 
         def mock_get_data(name, post_limit, comment_limit):
@@ -159,14 +157,14 @@ class TestFetchSubredditData:
         mock_reddit_client.get_subreddit_data.side_effect = mock_get_data
 
         all_posts, all_comments, analyzed = fetch_subreddit_data(
-            mock_reddit_client, ["r/ai", "r/ml"], post_limit=10, comment_limit=20
+            mock_reddit_client, ["r/ai", "r/ml"], post_limit=10, comment_limit=20, progress=mock_progress
         )
 
         assert len(all_posts) == 2
         assert len(all_comments) == 2
         assert analyzed == ["r/ai", "r/ml"]
 
-    def test_fetch_with_empty_subreddit(self, mock_reddit_client):
+    def test_fetch_with_empty_subreddit(self, mock_reddit_client, mock_progress):
         """Test fetching when one subreddit returns no data."""
 
         def mock_get_data(name, post_limit, comment_limit):
@@ -180,14 +178,14 @@ class TestFetchSubredditData:
         mock_reddit_client.get_subreddit_data.side_effect = mock_get_data
 
         all_posts, all_comments, analyzed = fetch_subreddit_data(
-            mock_reddit_client, ["r/ai", "r/empty"], post_limit=10, comment_limit=20
+            mock_reddit_client, ["r/ai", "r/empty"], post_limit=10, comment_limit=20, progress=mock_progress
         )
 
         assert len(all_posts) == 1
         assert len(all_comments) == 1
         assert analyzed == ["r/ai"]
 
-    def test_fetch_no_data_from_any_subreddit(self, mock_reddit_client):
+    def test_fetch_no_data_from_any_subreddit(self, mock_reddit_client: Mock, mock_progress: Mock):
         """Test when no data is fetched from any subreddit."""
         mock_reddit_client.get_subreddit_data.return_value = {
             "posts": [],
@@ -200,6 +198,7 @@ class TestFetchSubredditData:
                 ["r/empty1", "r/empty2"],
                 post_limit=10,
                 comment_limit=20,
+                progress=mock_progress,
             )
 
 
@@ -223,7 +222,7 @@ class TestAnalyzeContent:
 
     @patch("trendsleuth.cli.console")
     def test_analyze_success(
-        self, mock_console, mock_analyzer, sample_posts, sample_comments
+        self, mock_analyzer, sample_posts, sample_comments, mock_progress
     ):
         """Test successful analysis."""
         mock_analysis = TrendAnalysis(
@@ -241,6 +240,7 @@ class TestAnalyzeContent:
             posts=sample_posts,
             comments=sample_comments,
             include_evidence=False,
+            progress=mock_progress,
         )
 
         assert result == mock_analysis
@@ -252,7 +252,7 @@ class TestAnalyzeContent:
 
     @patch("trendsleuth.cli.console")
     def test_analyze_with_evidence(
-        self, mock_console, mock_analyzer, sample_posts, sample_comments
+        self, mock_analyzer, sample_posts, sample_comments, mock_progress
     ):
         """Test analysis with evidence flag."""
         mock_analysis = TrendAnalysis(
@@ -271,6 +271,7 @@ class TestAnalyzeContent:
             posts=sample_posts,
             comments=sample_comments,
             include_evidence=True,
+            progress=mock_progress,
         )
 
         assert result == mock_analysis
@@ -279,14 +280,18 @@ class TestAnalyzeContent:
 
     @patch("trendsleuth.cli.console")
     def test_analyze_failure(
-        self, mock_console, mock_analyzer, sample_posts, sample_comments
+        self, mock_analyzer, sample_posts, sample_comments, mock_progress
     ):
         """Test analysis failure."""
         mock_analyzer.analyze_subreddit_data.return_value = None
 
         with pytest.raises(CLIError, match="Failed to analyze the data"):
             analyze_content(
-                mock_analyzer, niche="AI", posts=sample_posts, comments=sample_comments
+                mock_analyzer,
+                niche="AI",
+                posts=sample_posts,
+                comments=sample_comments,
+                progress=mock_progress,
             )
 
 

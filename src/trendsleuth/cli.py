@@ -20,6 +20,7 @@ from trendsleuth.config import (
     get_config,
     validate_env_vars,
     validate_brave_env,
+    BraveConfig,
 )
 from trendsleuth.formatter import format_json, format_markdown
 from trendsleuth.reddit import RedditClient
@@ -28,6 +29,7 @@ from trendsleuth.ideas import (
     generate_ideas,
     format_ideas_as_markdown,
 )
+from trendsleuth.web_evidence import WebSearchConfig, gather_web_evidence
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +85,7 @@ def discover_subreddits(
     reddit_client: RedditClient,
     niche: str,
     subreddits: Optional[str],
+    progress: Progress,
 ) -> list[str]:
     """Discover or validate subreddits for the given niche.
 
@@ -97,16 +100,10 @@ def discover_subreddits(
     Raises:
         CLIError: If no subreddits found
     """
+    task_id = progress.add_task("[cyan]Discovering relevant subreddits...", total=None)
+
     if subreddits:
         return [s.strip() for s in subreddits.split(",")]
-
-    console.print(
-        Panel(
-            f"[bold cyan]Searching for subreddits related to:[/bold cyan] {niche}",
-            title="Discovery",
-            style="cyan",
-        )
-    )
 
     subreddit_list = reddit_client.search_subreddits(niche, limit=5)
     if not subreddit_list:
@@ -114,6 +111,8 @@ def discover_subreddits(
             "No subreddits found for this niche. "
             "Please try a different topic or specify subreddits manually."
         )
+    progress.update(task_id, total=len(subreddit_list))
+    progress.update(task_id, completed=len(subreddit_list))
 
     return subreddit_list
 
@@ -123,6 +122,7 @@ def fetch_subreddit_data(
     subreddit_list: list[str],
     post_limit: int,
     comment_limit: int,
+    progress: Progress,
 ) -> tuple[list, list, list[str]]:
     """Fetch posts and comments from all subreddits.
 
@@ -141,6 +141,10 @@ def fetch_subreddit_data(
     all_posts = []
     all_comments = []
     analyzed_subreddits = []
+    task_id = progress.add_task(
+        f"[cyan]Fetching data from {len(subreddit_list)} subreddit(s)...",
+        total=len(subreddit_list),
+    )
 
     for subreddit_name in subreddit_list:
         logger.debug(f"Fetching {subreddit_name}...")
@@ -158,6 +162,8 @@ def fetch_subreddit_data(
             logger.debug(
                 f"Found {len(data['posts'])} posts, {len(data['comments'])} comments"
             )
+        
+        progress.advance(task_id)
 
     if not analyzed_subreddits:
         raise CLIError(
@@ -173,6 +179,7 @@ def analyze_content(
     niche: str,
     posts: list,
     comments: list,
+    progress: Progress,
     include_evidence: bool = False,
 ) -> TrendAnalysis:
     """Analyze the collected content with the LLM.
@@ -190,13 +197,8 @@ def analyze_content(
     Raises:
         CLIError: If analysis fails
     """
-    console.print(
-        Panel(
-            "[bold cyan]Analyzing content with AI...",
-            title="Analysis",
-            style="cyan",
-        )
-    )
+
+    task_id = progress.add_task("[cyan]Analyzing with AI...", total=1)
 
     # Limit input to avoid token issues
     analysis = analyzer.analyze_subreddit_data(
@@ -211,6 +213,8 @@ def analyze_content(
             "Failed to analyze the data. "
             "Please try again with more data or a different model."
         )
+
+    progress.update(task_id, completed=1)
 
     return analysis
 
@@ -339,34 +343,27 @@ def run_analysis_pipeline(
         transient=True,
     ) as progress:
         # Step 1: Discover subreddits
-        progress.add_task("[cyan]Discovering relevant subreddits...", total=None)
         reddit_client = RedditClient(reddit_config)
-        subreddit_list = discover_subreddits(reddit_client, niche, subreddits)
+        subreddit_list = discover_subreddits(reddit_client, niche, subreddits, progress)
         logger.info(f"Discovered subreddits: {', '.join(subreddit_list)}")
 
         # Step 2: Fetch data
-        progress.add_task(
-            f"[cyan]Fetching data from {len(subreddit_list)} subreddit(s)...",
-            total=len(subreddit_list),
-        )
         all_posts, all_comments, analyzed_subreddits = fetch_subreddit_data(
-            reddit_client, subreddit_list, post_limit, comment_limit
-        )
+            reddit_client, subreddit_list, post_limit, comment_limit, progress)
 
         # Step 3: Analyze with LLM
-        progress.add_task("[cyan]Analyzing with AI...", total=None)
         analyzer = Analyzer(openai_config)
         analysis = analyze_content(
-            analyzer, niche, all_posts, all_comments, include_evidence
+            analyzer=analyzer,
+            niche=niche,
+            posts=all_posts,
+            comments=all_comments,
+            progress=progress,
+            include_evidence=include_evidence
         )
 
         # Step 4: Gather web evidence if requested
         if include_web:
-            from trendsleuth.config import BraveConfig
-            from trendsleuth.web_evidence import gather_web_evidence, WebEvidenceConfig
-
-            progress.add_task("[cyan]Gathering web evidence...", total=None)
-
             # Extract Reddit URLs from posts for deduplication
             reddit_urls = set()
             for post in all_posts:
@@ -377,21 +374,20 @@ def run_analysis_pipeline(
                 api_key=os.environ.get("BRAVE_API_KEY", ""),
                 rate_limit_rps=web_rate_limit_rps,
             )
-
-            web_config = WebEvidenceConfig(
-                evidence_limit=web_evidence_limit,
+            search_config = WebSearchConfig(
+                limit=web_evidence_limit,
                 results_per_query=web_results_per_query,
             )
-
             web_evidence = gather_web_evidence(
                 niche=niche,
                 pain_points=analysis.pain_points,
                 questions=analysis.questions,
                 topics=analysis.topics,
                 brave_config=brave_config,
-                web_config=web_config,
+                search_config=search_config,
                 analyzer=analyzer,
                 reddit_urls=reddit_urls,
+                progress=progress,
             )
 
             # Merge web evidence with existing evidence
