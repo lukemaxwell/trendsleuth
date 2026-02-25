@@ -1,6 +1,6 @@
 [project]
 name = "trendsleuth"
-version = "0.1.0"
+version = "0.1.1"
 description = "Reddit trend analysis for content creators"
 readme = "README.md"
 license = {text = "MIT"}
@@ -77,9 +77,3 @@ mypy_path = ["."]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/trendsleuth"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"src/trendsleuth/py.typed" = "trendsleuth/py.typed"
-
-[tool.hatch.build.targets.sdist.force-include]
-"src/trendsleuth/py.typed" = "trendsleuth/py.typed"
