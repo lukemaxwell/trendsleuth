@@ -1,7 +1,7 @@
 """Tests for the analyzer module."""
 
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, MagicMock, patch
 
 from trendsleuth.config import OpenAIConfig
 from trendsleuth.analyzer import Analyzer, TrendAnalysis, Evidence
@@ -39,10 +39,22 @@ class TestAnalyzer:
     def test_analyze_with_data(self, analyzer):
         """Test analysis with minimal mock data."""
         # This test ensures the analyzer can process data without crashing
+        # Create mocks with proper attributes including timestamps
+        mock_post = Mock()
+        mock_post.title = "Test Post"
+        mock_post.selftext = "This is test content"
+        mock_post.permalink = "/r/test/comments/123/test_post"
+        mock_post.created_utc = 1609459200  # 2021-01-01 00:00:00 UTC
+        
+        mock_comment = Mock()
+        mock_comment.body = "This is a test comment"
+        mock_comment.permalink = "/r/test/comments/123/test_post/456"
+        mock_comment.created_utc = 1609459200  # 2021-01-01 00:00:00 UTC
+        
         result = analyzer.analyze_subreddit_data(
             subreddit_name="r/test",
-            posts=[Mock(title="Test Post", selftext="This is test content")],
-            comments=[Mock(body="This is a test comment")],
+            posts=[mock_post],
+            comments=[mock_comment],
         )
         # Result may be None due to API issues, but should not crash
         # If it returns something, verify structure
@@ -71,19 +83,27 @@ class TestAnalyzer:
     @patch('trendsleuth.analyzer.ChatOpenAI')
     def test_extract_quotes_from_text(self, mock_chat, analyzer):
         """Test quote extraction from web page text."""
-        # Mock LLM response
-        mock_result = Mock()
-        mock_result.quotes = [
-            {"quote": "This is a pain point", "date": "2024-01-15"},
-            {"quote": "Another issue here", "date": None},
-        ]
+        # Create a properly structured mock result
+        class MockQuoteList:
+            quotes = [
+                {"quote": "This is a pain point", "date": "2024-01-15"},
+                {"quote": "Another issue here", "date": None},
+            ]
         
-        mock_chain = Mock()
-        mock_chain.invoke.return_value = mock_result
-        
-        # Mock the chain creation
-        with patch.object(analyzer, 'model') as mock_model:
-            mock_model.__or__ = Mock(return_value=mock_chain)
+        # Patch the prompt template's __or__ operator to mock the chain
+        with patch('trendsleuth.analyzer.ChatPromptTemplate') as mock_template:
+            mock_prompt_instance = MagicMock()
+            mock_template.from_messages.return_value = mock_prompt_instance
+            
+            # Mock the chain created via pipe operator
+            mock_chain = MagicMock()
+            mock_chain.invoke.return_value = MockQuoteList()
+            
+            # The chain is: prompt | model | parser
+            # We need to mock prompt | model first, then that result | parser
+            mock_intermediate = MagicMock()
+            mock_intermediate.__or__.return_value = mock_chain
+            mock_prompt_instance.__or__.return_value = mock_intermediate
             
             evidence = analyzer.extract_quotes_from_text(
                 text="Some text with pain points",
@@ -122,11 +142,31 @@ class TestAnalyzer:
         """Test that long text is truncated."""
         long_text = "a" * 10000
         
-        # Mock to capture the invoke call
-        with patch.object(analyzer, 'model') as mock_model:
-            mock_chain = Mock()
-            mock_chain.invoke.return_value = Mock(quotes=[])
-            mock_model.__or__ = Mock(return_value=mock_chain)
+        # Create a properly structured mock result
+        class MockQuoteList:
+            quotes = []
+        
+        # Mock the chain to capture what it's invoked with
+        invoke_args = None
+        
+        def capture_invoke(args):
+            nonlocal invoke_args
+            invoke_args = args
+            return MockQuoteList()
+        
+        # Patch the prompt template to intercept chain creation
+        with patch('trendsleuth.analyzer.ChatPromptTemplate') as mock_template:
+            mock_prompt_instance = MagicMock()
+            mock_template.from_messages.return_value = mock_prompt_instance
+            
+            # Mock the chain created via pipe operator
+            mock_chain = MagicMock()
+            mock_chain.invoke.side_effect = capture_invoke
+            
+            # The chain is: prompt | model | parser
+            mock_intermediate = MagicMock()
+            mock_intermediate.__or__.return_value = mock_chain
+            mock_prompt_instance.__or__.return_value = mock_intermediate
             
             analyzer.extract_quotes_from_text(
                 text=long_text,
@@ -135,5 +175,5 @@ class TestAnalyzer:
             )
             
             # Verify text was truncated
-            call_args = mock_chain.invoke.call_args[0][0]
-            assert len(call_args['text']) <= 5000
+            assert invoke_args is not None
+            assert len(invoke_args['text']) <= 5000
