@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Accurate cost estimation** for all OpenAI models (not just gpt-4o-mini)
+- New `pricing.py` module with comprehensive pricing data for all OpenAI models
+- New `token_tracker.py` module for tracking LangChain token usage
+- Token usage and cost display in verbose mode and completion messages
+- Cost information included in Markdown and JSON output
+- Warning log when unknown model uses fallback pricing
+- 14 new tests for pricing module
+
+### Changed
+- `Analyzer.analyze_subreddit_data()` now returns tuple: `(analysis, token_usage, cost)`
+- CLI displays accurate costs based on selected model
+- Cost estimates use actual OpenAI pricing (as of Feb 2026)
+
+### Fixed
+- Cost estimation now reflects the actual model selected by user
+- Previously all cost estimates used gpt-4o-mini pricing regardless of model
+
 ## [0.1.1] - 2026-02-25
 
 ### Fixed
