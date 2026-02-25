@@ -4,7 +4,6 @@ import json
 import pytest
 from unittest.mock import Mock, patch
 
-from rich.progress import Progress
 from typer.testing import CliRunner
 
 from trendsleuth.cli import (
@@ -22,7 +21,6 @@ from trendsleuth.cli import (
 )
 from trendsleuth.config import RedditConfig, OpenAIConfig
 from trendsleuth.analyzer import TrendAnalysis
-from trendsleuth.reddit import RedditClient
 
 runner = CliRunner()
 
@@ -73,7 +71,9 @@ class TestDiscoverSubreddits:
         assert result == ["r/ai", "r/machinelearning", "r/artificial"]
         mock_reddit_client.search_subreddits.assert_not_called()
 
-    def test_with_explicit_subreddits_whitespace(self, mock_reddit_client, mock_progress):
+    def test_with_explicit_subreddits_whitespace(
+        self, mock_reddit_client, mock_progress
+    ):
         """Test explicit subreddits with extra whitespace."""
         result = discover_subreddits(
             mock_reddit_client,
@@ -95,7 +95,9 @@ class TestDiscoverSubreddits:
             "r/deeplearning",
         ]
 
-        result = discover_subreddits(mock_reddit_client, niche="AI", subreddits=None, progress=mock_progress)
+        result = discover_subreddits(
+            mock_reddit_client, niche="AI", subreddits=None, progress=mock_progress
+        )
 
         assert result == [
             "r/ai",
@@ -113,7 +115,10 @@ class TestDiscoverSubreddits:
 
         with pytest.raises(CLIError, match="No subreddits found"):
             discover_subreddits(
-                mock_reddit_client, niche="NonexistentNiche", subreddits=None, progress=mock_progress
+                mock_reddit_client,
+                niche="NonexistentNiche",
+                subreddits=None,
+                progress=mock_progress,
             )
 
 
@@ -128,7 +133,11 @@ class TestFetchSubredditData:
         }
 
         all_posts, all_comments, analyzed = fetch_subreddit_data(
-            mock_reddit_client, ["r/test"], post_limit=10, comment_limit=20, progress=mock_progress
+            mock_reddit_client,
+            ["r/test"],
+            post_limit=10,
+            comment_limit=20,
+            progress=mock_progress,
         )
 
         assert len(all_posts) == 2
@@ -157,7 +166,11 @@ class TestFetchSubredditData:
         mock_reddit_client.get_subreddit_data.side_effect = mock_get_data
 
         all_posts, all_comments, analyzed = fetch_subreddit_data(
-            mock_reddit_client, ["r/ai", "r/ml"], post_limit=10, comment_limit=20, progress=mock_progress
+            mock_reddit_client,
+            ["r/ai", "r/ml"],
+            post_limit=10,
+            comment_limit=20,
+            progress=mock_progress,
         )
 
         assert len(all_posts) == 2
@@ -178,14 +191,20 @@ class TestFetchSubredditData:
         mock_reddit_client.get_subreddit_data.side_effect = mock_get_data
 
         all_posts, all_comments, analyzed = fetch_subreddit_data(
-            mock_reddit_client, ["r/ai", "r/empty"], post_limit=10, comment_limit=20, progress=mock_progress
+            mock_reddit_client,
+            ["r/ai", "r/empty"],
+            post_limit=10,
+            comment_limit=20,
+            progress=mock_progress,
         )
 
         assert len(all_posts) == 1
         assert len(all_comments) == 1
         assert analyzed == ["r/ai"]
 
-    def test_fetch_no_data_from_any_subreddit(self, mock_reddit_client: Mock, mock_progress: Mock):
+    def test_fetch_no_data_from_any_subreddit(
+        self, mock_reddit_client: Mock, mock_progress: Mock
+    ):
         """Test when no data is fetched from any subreddit."""
         mock_reddit_client.get_subreddit_data.return_value = {
             "posts": [],

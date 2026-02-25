@@ -2,8 +2,6 @@
 
 import logging
 from dataclasses import dataclass
-import os
-from typing import Iterator
 
 from rich.progress import Progress
 
@@ -17,6 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class WebSearchConfig:
     """Configuration for web search."""
+
     limit: int = 15
     max_queries: int = 30
     results_per_query: int = 5
@@ -93,12 +92,12 @@ def generate_search_queries(
 
 
 def fetch_search_result_urls(
-        queries: list[str], 
-        brave_config: BraveConfig, 
-        search_config: WebSearchConfig,
-        progress: Progress,
-        ignore_urls: set[str] | None,
-    ) -> set[str]:
+    queries: list[str],
+    brave_config: BraveConfig,
+    search_config: WebSearchConfig,
+    progress: Progress,
+    ignore_urls: set[str] | None,
+) -> set[str]:
     """Fetch search result urls for a list of queries.
 
     Args:
@@ -111,18 +110,13 @@ def fetch_search_result_urls(
     Returns:
         Set of URLs
     """
-    task_id = progress.add_task(
-        "[cyan]Performing web search...", total=len(queries))
+    task_id = progress.add_task("[cyan]Performing web search...", total=len(queries))
     brave_client = BraveClient(brave_config)
     # Collect URLs
     urls = set()
     for query in queries:
         for result in brave_client.search(query, count=search_config.results_per_query):
-            if (
-                result.url
-                and result.url not in urls
-                and result.url not in ignore_urls 
-            ):
+            if result.url and result.url not in urls and result.url not in ignore_urls:
                 urls.add(result.url)
         progress.advance(task_id)
     return urls
@@ -165,7 +159,8 @@ def gather_web_evidence(
         brave_config=brave_config,
         search_config=search_config,
         ignore_urls=reddit_urls,
-        progress=progress)
+        progress=progress,
+    )
 
     logger.info(f"Found {len(urls)} unique URLs (after deduplication)")
     # Fetch and extract quotes
@@ -181,8 +176,8 @@ def gather_web_evidence(
 
 
 def fetch_web_evidence_for_urls(
-    urls: set[str], 
-    analyzer: Analyzer, 
+    urls: set[str],
+    analyzer: Analyzer,
     niche: str,
     search_config: WebSearchConfig,
     progress: Progress,
@@ -201,7 +196,8 @@ def fetch_web_evidence_for_urls(
     """
     total = min(len(urls), search_config.limit)
     task_id = progress.add_task(
-        "[cyan]Fetching evidence from search results...", total=total)
+        "[cyan]Fetching evidence from search results...", total=total
+    )
     evidence_items: list[Evidence] = []
     for url in urls:
         if len(evidence_items) >= search_config.limit:

@@ -6,7 +6,6 @@ from unittest.mock import Mock, patch
 from trendsleuth.web_evidence import (
     generate_search_queries,
     gather_web_evidence,
-    WebEvidenceConfig,
     WebSearchConfig,
 )
 from trendsleuth.brave import BraveConfig, SearchResult
@@ -117,9 +116,9 @@ class TestGatherWebEvidence:
         mock_fetch,
         mock_brave_class,
         brave_config,
-            search_config,
+        search_config,
         mock_analyzer,
-        mock_progress
+        mock_progress,
     ):
         """Test successful evidence gathering."""
         # Mock Brave client
@@ -164,7 +163,7 @@ class TestGatherWebEvidence:
         brave_config,
         search_config,
         mock_analyzer,
-        mock_progress
+        mock_progress,
     ):
         """Test that duplicate URLs are not fetched twice."""
         # Mock Brave client returns same URL from multiple queries
@@ -189,7 +188,7 @@ class TestGatherWebEvidence:
             search_config=search_config,
             analyzer=mock_analyzer,
             reddit_urls=set(),
-            progress=mock_progress
+            progress=mock_progress,
         )
 
         # Should only fetch each unique URL once
@@ -206,7 +205,7 @@ class TestGatherWebEvidence:
         brave_config,
         search_config,
         mock_analyzer,
-        mock_progress
+        mock_progress,
     ):
         """Test that Reddit URLs are excluded."""
         mock_brave = Mock()
@@ -237,7 +236,7 @@ class TestGatherWebEvidence:
             search_config=search_config,
             analyzer=mock_analyzer,
             reddit_urls=reddit_urls,
-            progress=mock_progress
+            progress=mock_progress,
         )
 
         # Should not fetch Reddit URL
@@ -254,7 +253,7 @@ class TestGatherWebEvidence:
         brave_config,
         search_config,
         mock_analyzer,
-        mock_progress
+        mock_progress,
     ):
         """Test that evidence limit is enforced."""
         # Return many URLs
@@ -286,7 +285,7 @@ class TestGatherWebEvidence:
             search_config=search_config,
             analyzer=mock_analyzer,
             reddit_urls=set(),
-            progress=mock_progress
+            progress=mock_progress,
         )
 
         # Should not exceed evidence_limit
@@ -301,7 +300,7 @@ class TestGatherWebEvidence:
         brave_config,
         search_config,
         mock_analyzer,
-        mock_progress
+        mock_progress,
     ):
         """Test that fetch failures are handled gracefully."""
         mock_brave = Mock()
@@ -322,7 +321,7 @@ class TestGatherWebEvidence:
             search_config=search_config,
             analyzer=mock_analyzer,
             reddit_urls=set(),
-            progress=mock_progress
+            progress=mock_progress,
         )
 
         # Should return empty list, not crash

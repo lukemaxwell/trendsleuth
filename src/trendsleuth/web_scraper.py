@@ -24,7 +24,7 @@ class HTMLTextExtractor(HTMLParser):
     def __init__(self):
         super().__init__()
         self.text_parts = []
-       
+
         self.skip_level = 0
 
     def handle_starttag(self, tag, attrs):

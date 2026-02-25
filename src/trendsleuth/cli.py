@@ -162,7 +162,7 @@ def fetch_subreddit_data(
             logger.debug(
                 f"Found {len(data['posts'])} posts, {len(data['comments'])} comments"
             )
-        
+
         progress.advance(task_id)
 
     if not analyzed_subreddits:
@@ -349,7 +349,8 @@ def run_analysis_pipeline(
 
         # Step 2: Fetch data
         all_posts, all_comments, analyzed_subreddits = fetch_subreddit_data(
-            reddit_client, subreddit_list, post_limit, comment_limit, progress)
+            reddit_client, subreddit_list, post_limit, comment_limit, progress
+        )
 
         # Step 3: Analyze with LLM
         analyzer = Analyzer(openai_config)
@@ -359,7 +360,7 @@ def run_analysis_pipeline(
             posts=all_posts,
             comments=all_comments,
             progress=progress,
-            include_evidence=include_evidence
+            include_evidence=include_evidence,
         )
 
         # Step 4: Gather web evidence if requested
