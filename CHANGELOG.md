@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-02-25
+
+### Fixed
+- Screenshot image in README now uses full GitHub raw URL for PyPI compatibility
+- PyPI package page now displays the screenshot correctly
+
 ## [0.1.3] - 2026-02-25
 
 ### Added
@@ -32,7 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Critical:** Cost estimation now correctly reflects the actual model selected by user
 - Previously all cost estimates incorrectly used gpt-4o-mini pricing regardless of `--model` parameter
 - This could result in significant cost underestimation (e.g., gpt-4o is ~17x more expensive than gpt-4o-mini)
-- Screenshot image in README (switched back to full GitHub URL for PyPI compatibility)
 
 ### Technical
 - Added `TokenUsageTracker` callback handler for LangChain
