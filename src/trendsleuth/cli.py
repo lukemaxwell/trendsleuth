@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 app = typer.Typer(
     name="trendsleuth",
-    help="Reddit trend analysis for content creators",
+    help="Reddit trend analysis for content creators and builders",
     no_args_is_help=True,
 )
 
