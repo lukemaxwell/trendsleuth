@@ -1,7 +1,6 @@
 """Configuration and environment settings for TrendSleuth."""
 
 import os
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -9,9 +8,15 @@ from pydantic import BaseModel, Field
 class RedditConfig(BaseModel):
     """Configuration for Reddit API access."""
 
-    client_id: str = Field(default_factory=lambda: os.environ.get("REDDIT_CLIENT_ID", ""))
-    client_secret: str = Field(default_factory=lambda: os.environ.get("REDDIT_CLIENT_SECRET", ""))
-    user_agent: str = Field(default_factory=lambda: os.environ.get("REDDIT_USER_AGENT", "TrendSleuth/0.1.0"))
+    client_id: str = Field(
+        default_factory=lambda: os.environ.get("REDDIT_CLIENT_ID", "")
+    )
+    client_secret: str = Field(
+        default_factory=lambda: os.environ.get("REDDIT_CLIENT_SECRET", "")
+    )
+    user_agent: str = Field(
+        default_factory=lambda: os.environ.get("REDDIT_USER_AGENT", "TrendSleuth/0.1.0")
+    )
 
 
 class OpenAIConfig(BaseModel):
@@ -34,11 +39,11 @@ class AppConfig(BaseModel):
     verbose: bool = False
     limit: int = 50
     output_format: str = "markdown"
-    
+
     # Rate limiting
     max_retries: int = 3
     retry_delay: float = 1.0
-    
+
     # Timeouts
     request_timeout: int = 30
     search_timeout: int = 15
@@ -68,7 +73,7 @@ def validate_env_vars() -> list[str]:
 
 def validate_brave_env() -> bool:
     """Check if Brave API key is configured.
-    
+
     Returns:
         True if BRAVE_API_KEY is set
     """

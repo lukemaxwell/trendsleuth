@@ -60,7 +60,7 @@ class CLIError(Exception):
 
 def validate_configuration() -> bool:
     """Validate required configuration.
-    
+
     Returns:
         True if configuration is valid, False otherwise.
     """
@@ -85,15 +85,15 @@ def discover_subreddits(
     subreddits: Optional[str],
 ) -> list[str]:
     """Discover or validate subreddits for the given niche.
-    
+
     Args:
         reddit_client: Reddit API client
         niche: Topic to analyze
         subreddits: Optional comma-separated list of subreddits
-        
+
     Returns:
         List of subreddit names
-        
+
     Raises:
         CLIError: If no subreddits found
     """
@@ -107,7 +107,7 @@ def discover_subreddits(
             style="cyan",
         )
     )
-    
+
     subreddit_list = reddit_client.search_subreddits(niche, limit=5)
     if not subreddit_list:
         raise CLIError(
@@ -125,16 +125,16 @@ def fetch_subreddit_data(
     comment_limit: int,
 ) -> tuple[list, list, list[str]]:
     """Fetch posts and comments from all subreddits.
-    
+
     Args:
         reddit_client: Reddit API client
         subreddit_list: List of subreddit names
         post_limit: Maximum posts per subreddit
         comment_limit: Maximum comments per post
-        
+
     Returns:
         Tuple of (all_posts, all_comments, analyzed_subreddits)
-        
+
     Raises:
         CLIError: If no data could be fetched
     """
@@ -176,17 +176,17 @@ def analyze_content(
     include_evidence: bool = False,
 ) -> TrendAnalysis:
     """Analyze the collected content with the LLM.
-    
+
     Args:
         analyzer: Analysis client
         niche: Topic being analyzed
         posts: List of Reddit posts
         comments: List of Reddit comments
         include_evidence: If True, include evidence with quotes and URLs
-        
+
     Returns:
         Analysis results
-        
+
     Raises:
         CLIError: If analysis fails
     """
@@ -217,11 +217,11 @@ def analyze_content(
 
 def format_output(analysis: TrendAnalysis, output_format: str) -> str:
     """Format the analysis results.
-    
+
     Args:
         analysis: Analysis results
         output_format: Output format ('markdown' or 'json')
-        
+
     Returns:
         Formatted output string
     """
@@ -229,11 +229,11 @@ def format_output(analysis: TrendAnalysis, output_format: str) -> str:
         "markdown": format_markdown,
         "json": format_json,
     }
-    
+
     formatter = formatters.get(output_format)
     if not formatter:
         raise ValueError(f"Unsupported output format: {output_format}")
-    
+
     return formatter(
         subreddit=analysis.subreddit,
         analysis=analysis,
@@ -244,7 +244,7 @@ def format_output(analysis: TrendAnalysis, output_format: str) -> str:
 
 def write_output(content: str, output_file: Optional[str]) -> None:
     """Write output to file or stdout.
-    
+
     Args:
         content: Content to write
         output_file: Optional output file path
@@ -265,14 +265,14 @@ def write_output(content: str, output_file: Optional[str]) -> None:
 
 def print_summary(ctx: AnalysisContext, verbose: bool = False) -> None:
     """Print analysis summary.
-    
+
     Args:
         ctx: Analysis context with results
         verbose: If True, print detailed table with metrics
     """
     if not ctx.analysis:
         return
-    
+
     if verbose:
         table = Table(title="Analysis Summary")
         table.add_column("Metric", style="cyan")
@@ -281,7 +281,7 @@ def print_summary(ctx: AnalysisContext, verbose: bool = False) -> None:
         table.add_row("Posts processed", str(len(ctx.all_posts)))
         table.add_row("Comments processed", str(len(ctx.all_comments)))
         table.add_row("Sentiment", ctx.analysis.sentiment)
-        
+
         console.print("\n")
         console.print(table)
 
@@ -311,7 +311,7 @@ def run_analysis_pipeline(
     web_rate_limit_rps: float = 1.0,
 ) -> AnalysisContext:
     """Run the complete analysis pipeline.
-    
+
     Args:
         reddit_config: Reddit API configuration
         openai_config: OpenAI API configuration
@@ -324,10 +324,10 @@ def run_analysis_pipeline(
         web_evidence_limit: Maximum web evidence items to collect
         web_results_per_query: Brave results per query
         web_rate_limit_rps: Brave API rate limit (requests per second)
-        
+
     Returns:
         Analysis context with results
-        
+
     Raises:
         CLIError: If any step fails
     """
@@ -355,31 +355,33 @@ def run_analysis_pipeline(
         # Step 3: Analyze with LLM
         progress.add_task("[cyan]Analyzing with AI...", total=None)
         analyzer = Analyzer(openai_config)
-        analysis = analyze_content(analyzer, niche, all_posts, all_comments, include_evidence)
-        
+        analysis = analyze_content(
+            analyzer, niche, all_posts, all_comments, include_evidence
+        )
+
         # Step 4: Gather web evidence if requested
         if include_web:
             from trendsleuth.config import BraveConfig
             from trendsleuth.web_evidence import gather_web_evidence, WebEvidenceConfig
-            
+
             progress.add_task("[cyan]Gathering web evidence...", total=None)
-            
+
             # Extract Reddit URLs from posts for deduplication
             reddit_urls = set()
             for post in all_posts:
-                if hasattr(post, 'permalink'):
+                if hasattr(post, "permalink"):
                     reddit_urls.add(f"https://reddit.com{post.permalink}")
-            
+
             brave_config = BraveConfig(
                 api_key=os.environ.get("BRAVE_API_KEY", ""),
                 rate_limit_rps=web_rate_limit_rps,
             )
-            
+
             web_config = WebEvidenceConfig(
                 evidence_limit=web_evidence_limit,
                 results_per_query=web_results_per_query,
             )
-            
+
             web_evidence = gather_web_evidence(
                 niche=niche,
                 pain_points=analysis.pain_points,
@@ -390,7 +392,7 @@ def run_analysis_pipeline(
                 analyzer=analyzer,
                 reddit_urls=reddit_urls,
             )
-            
+
             # Merge web evidence with existing evidence
             if analysis.evidence:
                 analysis.evidence.extend(web_evidence)
@@ -478,11 +480,11 @@ def analyze(
             level=logging.DEBUG,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
-    
+
     # Validate configuration
     if not validate_configuration():
         raise typer.Exit(code=1)
-    
+
     # Check Brave API key if web evidence requested
     if include_web and not validate_brave_env():
         console.print(
@@ -602,16 +604,16 @@ def niches(
             )
         )
         raise typer.Exit(code=1)
-    
+
     # Load configuration
     _, openai_config, _, _ = get_config()
     openai_config.model = model
-    
+
     try:
         # Generate niches
         analyzer = Analyzer(openai_config)
         niche_list = analyzer.generate_niches(theme=theme, count=count)
-        
+
         if not niche_list:
             console.print(
                 Panel(
@@ -622,14 +624,14 @@ def niches(
                 )
             )
             raise typer.Exit(code=1)
-        
+
         # Output results
         if output_json:
             print(json.dumps(niche_list, indent=2))
         else:
             for niche in niche_list:
                 print(niche)
-    
+
     except Exception as e:
         logger.exception("Unexpected error generating niches")
         console.print(
@@ -685,9 +687,9 @@ def ideas(
             )
         )
         raise typer.Exit(code=1)
-    
+
     # Validate idea type
-    if idea_type not in ('business', 'app', 'content'):
+    if idea_type not in ("business", "app", "content"):
         console.print(
             Panel(
                 f"[bold red]Invalid idea type: {idea_type}[/bold red]\n\n"
@@ -697,9 +699,9 @@ def ideas(
             )
         )
         raise typer.Exit(code=1)
-    
+
     # Validate format
-    if output_format not in ('md', 'json'):
+    if output_format not in ("md", "json"):
         console.print(
             Panel(
                 f"[bold red]Invalid format: {output_format}[/bold red]\n\n"
@@ -709,11 +711,11 @@ def ideas(
             )
         )
         raise typer.Exit(code=1)
-    
+
     # Load configuration
     _, openai_config, _, _ = get_config()
     openai_config.model = model
-    
+
     try:
         # Load analysis file
         console.print(
@@ -723,9 +725,9 @@ def ideas(
                 style="cyan",
             )
         )
-        
+
         signals = load_analysis_file(input_file)
-        
+
         # Generate ideas
         console.print(
             Panel(
@@ -734,24 +736,24 @@ def ideas(
                 style="cyan",
             )
         )
-        
+
         ideas_data = generate_ideas(
             config=openai_config,
             signals=signals,
             idea_type=idea_type,
             count=count,
         )
-        
+
         # Format output
-        if output_format == 'json':
+        if output_format == "json":
             output = json.dumps(ideas_data, indent=2)
         else:
             output = format_ideas_as_markdown(ideas_data)
-        
+
         # Print to stdout
         console.print("\n")
         console.print(output)
-        
+
     except ValueError as e:
         console.print(
             Panel(
@@ -791,7 +793,9 @@ def config(
 
         table.add_row(
             "Reddit Client ID",
-            reddit_config.client_id[:8] + "..." if reddit_config.client_id else "Not set",
+            reddit_config.client_id[:8] + "..."
+            if reddit_config.client_id
+            else "Not set",
         )
         table.add_row("Reddit User Agent", reddit_config.user_agent)
         table.add_row("OpenAI Model", openai_config.model)
