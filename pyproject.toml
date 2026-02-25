@@ -5,7 +5,7 @@ description = "Reddit trend analysis for content creators"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "Luke Maxwell", email = "luke.maxwell@example.com"}
+    {name = "Luke Maxwell", email = "luke.maxwelle@example.com"}
 ]
 requires-python = ">=3.12"
 dependencies = [
@@ -46,3 +46,16 @@ dev = [
     "types-requests>=2.32.4.20260107",
     "types-tqdm>=4.67.3.20260205",
 ]
+
+
+[tool.mypy]
+mypy_path = ["."]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/trendsleuth"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/trendsleuth/py.typed" = "trendsleuth/py.typed"
+
+[tool.hatch.build.targets.sdist.force-include]
+"src/trendsleuth/py.typed" = "trendsleuth/py.typed"
