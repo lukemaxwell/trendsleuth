@@ -2,14 +2,13 @@
 
 > **From Reddit signals to validated ideas**
 
-[![PyPI version](https://badge.fury.io/py/trendsleuth.svg)](https://badge.fury.io/py/trendsleuth)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![codecov](https://codecov.io/gh/lukemaxwell/trendsleuth/graph/badge.svg)](https://codecov.io/gh/lukemaxwell/trendsleuth)
 
 TrendSleuth analyzes Reddit conversations to uncover emerging trends, pain points, and unanswered questions and turns those insights into actionable content, product, and business ideas.
 
-![Analysis screenshot](https://raw.githubusercontent.com/lukemaxwell/trendsleuth/main/trendsleuth-analysis.png)
+![Anaylsis screenshot](trendsleuth-analysis.png)
 
 ## Features
 
@@ -21,8 +20,6 @@ TrendSleuth analyzes Reddit conversations to uncover emerging trends, pain point
 - 📝 **Markdown & JSON output** - Get results in your preferred format
 - 🌐 **Web evidence** - Search the web using Brave Search API for additional insights
 - 💰 **Cost tracking** - See token usage and estimated API costs
-- 🚀 **Fast & efficient** - Process hundreds of posts and comments quickly
-- 📺 **Rich terminal UI** - Beautiful progress indicators and results
 
 ## Installation
 
