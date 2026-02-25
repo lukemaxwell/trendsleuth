@@ -10,6 +10,8 @@ from pydantic import BaseModel, Field, SecretStr
 from langchain_core.output_parsers import PydanticOutputParser
 
 from trendsleuth.config import OpenAIConfig
+from trendsleuth.pricing import estimate_cost as calculate_cost
+from trendsleuth.token_tracker import TokenUsageTracker
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +62,7 @@ class Analyzer:
             temperature=0.7,
         )
         self.parser = PydanticOutputParser(pydantic_object=TrendAnalysis)
+        self.token_tracker = TokenUsageTracker()
 
     def analyze_subreddit_data(
         self,
@@ -67,7 +70,7 @@ class Analyzer:
         posts: list,
         comments: list,
         include_evidence: bool = False,
-    ) -> Optional[TrendAnalysis]:
+    ) -> tuple[Optional[TrendAnalysis], dict[str, int], float]:
         """Analyze subreddit data and extract trends.
 
         Args:
@@ -77,10 +80,10 @@ class Analyzer:
             include_evidence: If True, include evidence with quotes and URLs
 
         Returns:
-            TrendAnalysis object or None if analysis fails
+            Tuple of (TrendAnalysis object or None, token_usage dict, estimated_cost)
         """
         if not posts and not comments:
-            return None
+            return None, {}, 0.0
 
         # Prepare text content with metadata for evidence
         content_parts = [f"Subreddit: {subreddit_name}\n"]
@@ -168,17 +171,28 @@ Be concise and focused on what content creators should know.""",
             ]
         )
 
+        # Reset token tracker before analysis
+        self.token_tracker.reset()
+
         try:
             chain = prompt_template | self.model | self.parser
             result = chain.invoke(
                 {
                     "content": full_content[:15000],
                     "format_instructions": self.parser.get_format_instructions(),
-                }
+                },
+                config={"callbacks": [self.token_tracker]},
             )
-            return result
+
+            # Get token usage and calculate cost
+            token_usage = self.token_tracker.get_usage()
+            cost = self.estimate_cost(
+                token_usage["input_tokens"], token_usage["output_tokens"]
+            )
+
+            return result, token_usage, cost
         except Exception:
-            return None
+            return None, {}, 0.0
 
     def generate_niches(
         self,
@@ -338,13 +352,20 @@ Return JSON array of objects:
             return []
 
     def estimate_cost(self, prompt_tokens: int, completion_tokens: int) -> float:
-        """Estimate API cost based on token usage."""
-        # gpt-4o-mini pricing (as of 2024)
-        input_price_per_1k = 0.00015
-        output_price_per_1k = 0.0006
+        """Estimate API cost based on token usage and model.
 
-        cost = (
-            prompt_tokens * input_price_per_1k / 1000
-            + completion_tokens * output_price_per_1k / 1000
+        Uses actual pricing for the configured model. Falls back to
+        gpt-4o-mini pricing for unknown models.
+        """
+        cost, is_exact = calculate_cost(
+            self.config.model, prompt_tokens, completion_tokens
         )
+
+        if not is_exact:
+            logger.warning(
+                f"Unknown model '{self.config.model}'. "
+                f"Using gpt-4o-mini pricing as fallback. "
+                f"Cost estimate may be inaccurate."
+            )
+
         return cost

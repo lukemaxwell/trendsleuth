@@ -251,9 +251,15 @@ class TestAnalyzeContent:
             sentiment="positive",
             summary="Test summary",
         )
-        mock_analyzer.analyze_subreddit_data.return_value = mock_analysis
+        token_usage = {"input_tokens": 100, "output_tokens": 50, "total_tokens": 150}
+        cost = 0.0001
+        mock_analyzer.analyze_subreddit_data.return_value = (
+            mock_analysis,
+            token_usage,
+            cost,
+        )
 
-        result = analyze_content(
+        result, result_token_usage, result_cost = analyze_content(
             mock_analyzer,
             niche="AI",
             posts=sample_posts,
@@ -263,6 +269,8 @@ class TestAnalyzeContent:
         )
 
         assert result == mock_analysis
+        assert result_token_usage == token_usage
+        assert result_cost == cost
         # Should limit to 20 posts and 200 comments
         mock_analyzer.analyze_subreddit_data.assert_called_once()
         call_args = mock_analyzer.analyze_subreddit_data.call_args
@@ -282,9 +290,15 @@ class TestAnalyzeContent:
             summary="Test summary",
             evidence=[],
         )
-        mock_analyzer.analyze_subreddit_data.return_value = mock_analysis
+        token_usage = {"input_tokens": 100, "output_tokens": 50, "total_tokens": 150}
+        cost = 0.0001
+        mock_analyzer.analyze_subreddit_data.return_value = (
+            mock_analysis,
+            token_usage,
+            cost,
+        )
 
-        result = analyze_content(
+        result, _, _ = analyze_content(
             mock_analyzer,
             niche="AI",
             posts=sample_posts,
@@ -302,7 +316,7 @@ class TestAnalyzeContent:
         self, mock_analyzer, sample_posts, sample_comments, mock_progress
     ):
         """Test analysis failure."""
-        mock_analyzer.analyze_subreddit_data.return_value = None
+        mock_analyzer.analyze_subreddit_data.return_value = (None, {}, 0.0)
 
         with pytest.raises(CLIError, match="Failed to analyze the data"):
             analyze_content(
@@ -481,7 +495,13 @@ class TestRunAnalysisPipeline:
             sentiment="positive",
             summary="Test summary",
         )
-        mock_analyzer.analyze_subreddit_data.return_value = mock_analysis
+        token_usage = {"input_tokens": 100, "output_tokens": 50, "total_tokens": 150}
+        cost = 0.0001
+        mock_analyzer.analyze_subreddit_data.return_value = (
+            mock_analysis,
+            token_usage,
+            cost,
+        )
         mock_analyzer_class.return_value = mock_analyzer
 
         result = run_analysis_pipeline(
@@ -523,7 +543,13 @@ class TestRunAnalysisPipeline:
             sentiment="positive",
             summary="Test summary",
         )
-        mock_analyzer.analyze_subreddit_data.return_value = mock_analysis
+        token_usage = {"input_tokens": 100, "output_tokens": 50, "total_tokens": 150}
+        cost = 0.0001
+        mock_analyzer.analyze_subreddit_data.return_value = (
+            mock_analysis,
+            token_usage,
+            cost,
+        )
         mock_analyzer_class.return_value = mock_analyzer
 
         result = run_analysis_pipeline(

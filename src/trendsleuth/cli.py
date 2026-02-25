@@ -52,6 +52,8 @@ class AnalysisContext:
     all_comments: list
     analyzed_subreddits: list[str]
     analysis: Optional[TrendAnalysis] = None
+    token_usage: Optional[dict[str, int]] = None
+    cost: Optional[float] = None
 
 
 class CLIError(Exception):
@@ -181,7 +183,7 @@ def analyze_content(
     comments: list,
     progress: Progress,
     include_evidence: bool = False,
-) -> TrendAnalysis:
+) -> tuple[TrendAnalysis, dict[str, int], float]:
     """Analyze the collected content with the LLM.
 
     Args:
@@ -192,7 +194,7 @@ def analyze_content(
         include_evidence: If True, include evidence with quotes and URLs
 
     Returns:
-        Analysis results
+        Tuple of (analysis results, token_usage dict, estimated_cost)
 
     Raises:
         CLIError: If analysis fails
@@ -201,7 +203,7 @@ def analyze_content(
     task_id = progress.add_task("[cyan]Analyzing with AI...", total=1)
 
     # Limit input to avoid token issues
-    analysis = analyzer.analyze_subreddit_data(
+    analysis, token_usage, cost = analyzer.analyze_subreddit_data(
         subreddit_name=f"r/{niche.replace(' ', '-')}",
         posts=posts[:20],
         comments=comments[:200],
@@ -216,16 +218,24 @@ def analyze_content(
 
     progress.update(task_id, completed=1)
 
-    return analysis
+    return analysis, token_usage, cost
 
 
-def format_output(analysis: TrendAnalysis, output_format: str, subreddit: str) -> str:
+def format_output(
+    analysis: TrendAnalysis,
+    output_format: str,
+    subreddit: str,
+    token_usage: Optional[dict[str, int]] = None,
+    cost: Optional[float] = None,
+) -> str:
     """Format the analysis results.
 
     Args:
         analysis: Analysis results
         output_format: Output format ('markdown' or 'json')
         subreddit: Subreddit name or niche
+        token_usage: Token usage statistics
+        cost: Estimated API cost
 
     Returns:
         Formatted output string
@@ -242,8 +252,8 @@ def format_output(analysis: TrendAnalysis, output_format: str, subreddit: str) -
     return formatter(
         subreddit=subreddit,
         analysis=analysis,
-        token_usage=None,
-        cost=None,
+        token_usage=token_usage,
+        cost=cost,
     )
 
 
@@ -287,15 +297,31 @@ def print_summary(ctx: AnalysisContext, verbose: bool = False) -> None:
         table.add_row("Comments processed", str(len(ctx.all_comments)))
         table.add_row("Sentiment", ctx.analysis.sentiment)
 
+        if ctx.token_usage:
+            total_tokens = ctx.token_usage.get("total_tokens", 0)
+            table.add_row("Total tokens", f"{total_tokens:,}")
+
+        if ctx.cost is not None:
+            table.add_row("Estimated cost", f"${ctx.cost:.4f}")
+
         console.print("\n")
         console.print(table)
 
+    # Build completion message
+    completion_msg = (
+        f"[bold green]✓ Analysis complete![/bold green]\n"
+        f"  Found {len(ctx.analysis.topics)} topics, "
+        f"{len(ctx.analysis.pain_points)} pain points, "
+        f"{len(ctx.analysis.questions)} questions"
+    )
+
+    # Add cost info to completion message if available
+    if ctx.cost is not None and not verbose:
+        completion_msg += f"\n  Cost: [yellow]${ctx.cost:.4f}[/yellow]"
+
     console.print(
         Panel(
-            f"[bold green]✓ Analysis complete![/bold green]\n"
-            f"  Found {len(ctx.analysis.topics)} topics, "
-            f"{len(ctx.analysis.pain_points)} pain points, "
-            f"{len(ctx.analysis.questions)} questions",
+            completion_msg,
             title="Done",
             style="green",
         )
@@ -354,7 +380,7 @@ def run_analysis_pipeline(
 
         # Step 3: Analyze with LLM
         analyzer = Analyzer(openai_config)
-        analysis = analyze_content(
+        analysis, token_usage, cost = analyze_content(
             analyzer=analyzer,
             niche=niche,
             posts=all_posts,
@@ -404,6 +430,8 @@ def run_analysis_pipeline(
         all_comments=all_comments,
         analyzed_subreddits=analyzed_subreddits,
         analysis=analysis,
+        token_usage=token_usage,
+        cost=cost,
     )
 
 
@@ -538,7 +566,9 @@ def analyze(
 
         # Format and write output
         if ctx.analysis is not None:
-            output_content = format_output(ctx.analysis, output_format, ctx.niche)
+            output_content = format_output(
+                ctx.analysis, output_format, ctx.niche, ctx.token_usage, ctx.cost
+            )
             write_output(output_content, output_file)
 
         # Print summary

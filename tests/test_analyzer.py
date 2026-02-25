@@ -29,12 +29,14 @@ class TestAnalyzer:
 
     def test_analyze_empty_data(self, analyzer):
         """Test analysis with no data."""
-        result = analyzer.analyze_subreddit_data(
+        result, token_usage, cost = analyzer.analyze_subreddit_data(
             subreddit_name="r/test",
             posts=[],
             comments=[],
         )
         assert result is None
+        assert token_usage == {}
+        assert cost == 0.0
 
     def test_analyze_with_data(self, analyzer):
         """Test analysis with minimal mock data."""
@@ -51,7 +53,7 @@ class TestAnalyzer:
         mock_comment.permalink = "/r/test/comments/123/test_post/456"
         mock_comment.created_utc = 1609459200  # 2021-01-01 00:00:00 UTC
 
-        result = analyzer.analyze_subreddit_data(
+        result, token_usage, cost = analyzer.analyze_subreddit_data(
             subreddit_name="r/test",
             posts=[mock_post],
             comments=[mock_comment],
@@ -64,15 +66,21 @@ class TestAnalyzer:
             assert len(result.questions) >= 0
             assert isinstance(result.summary, str)
             assert result.sentiment in ("positive", "negative", "neutral")
+            # Verify token usage and cost are returned
+            assert isinstance(token_usage, dict)
+            assert isinstance(cost, float)
+            assert cost >= 0
 
     def test_analyze_with_none_data(self, analyzer):
         """Test analysis with None data."""
-        result = analyzer.analyze_subreddit_data(
+        result, token_usage, cost = analyzer.analyze_subreddit_data(
             subreddit_name="r/test",
             posts=None,
             comments=None,
         )
         assert result is None
+        assert token_usage == {}
+        assert cost == 0.0
 
     def test_estimate_cost(self, analyzer):
         """Test cost estimation."""
