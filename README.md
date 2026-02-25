@@ -2,7 +2,7 @@
 
 > **From Reddit signals to validated ideas**
 
-TrendSleuth analyzes Reddit conversations to uncover emerging trends, real user pain points, and unanswered questions—and turns those insights into actionable content, product, and business ideas.
+TrendSleuth analyzes Reddit conversations to uncover emerging trends, pain points, and unanswered questions and turns those insights into actionable content, product, and business ideas.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
