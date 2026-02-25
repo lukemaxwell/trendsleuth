@@ -7,23 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-02-25
+
 ### Added
 - **Accurate cost estimation** for all OpenAI models (not just gpt-4o-mini)
-- New `pricing.py` module with comprehensive pricing data for all OpenAI models
-- New `token_tracker.py` module for tracking LangChain token usage
-- Token usage and cost display in verbose mode and completion messages
-- Cost information included in Markdown and JSON output
+- New `pricing.py` module with comprehensive pricing data for 36+ OpenAI models
+- New `token_tracker.py` module for real-time LangChain token usage tracking
+- Token usage (input/output/total) displayed in verbose mode and completion messages
+- Cost information included in both Markdown and JSON output formats
+- Fallback pricing for unknown or future OpenAI models
 - Warning log when unknown model uses fallback pricing
-- 14 new tests for pricing module
+- 14 new comprehensive tests for pricing module
+- GitHub Actions workflow for automated PyPI publishing
+- Complete release documentation (`RELEASE_PROCESS.md`, `PYPI_SETUP.md`)
 
 ### Changed
 - `Analyzer.analyze_subreddit_data()` now returns tuple: `(analysis, token_usage, cost)`
-- CLI displays accurate costs based on selected model
-- Cost estimates use actual OpenAI pricing (as of Feb 2026)
+- `Analyzer.estimate_cost()` now uses actual model pricing instead of hardcoded gpt-4o-mini rates
+- CLI displays accurate costs based on user's selected model (e.g., `--model gpt-4o`)
+- Cost estimates use real OpenAI API pricing (as of February 2026)
+- All analyzer and CLI tests updated to handle new tuple return format
 
 ### Fixed
-- Cost estimation now reflects the actual model selected by user
-- Previously all cost estimates used gpt-4o-mini pricing regardless of model
+- **Critical:** Cost estimation now correctly reflects the actual model selected by user
+- Previously all cost estimates incorrectly used gpt-4o-mini pricing regardless of `--model` parameter
+- This could result in significant cost underestimation (e.g., gpt-4o is ~17x more expensive than gpt-4o-mini)
+
+### Technical
+- Added `TokenUsageTracker` callback handler for LangChain
+- Added pricing data structure with per-1M-token costs for input/output
+- Enhanced `AnalysisContext` to store token_usage and cost
+- Updated `format_output()` to include cost metrics in output
+- Updated `print_summary()` to display token usage in verbose mode
+- All 119 tests passing with new token tracking system
+
+## [0.1.2] - 2026-02-26
+
+### Added
+- Initial PyPI release with all core features
 
 ## [0.1.1] - 2026-02-25
 
