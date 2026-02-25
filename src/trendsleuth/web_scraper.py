@@ -7,6 +7,8 @@ from html.parser import HTMLParser
 
 import requests
 
+USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+
 logger = logging.getLogger(__name__)
 
 
@@ -19,6 +21,7 @@ class HTMLTextExtractor(HTMLParser):
     def __init__(self):
         super().__init__()
         self.text_parts = []
+       
         self.skip_level = 0
 
     def handle_starttag(self, tag, attrs):
@@ -83,7 +86,7 @@ def fetch_page_text(
         logger.debug(f"Fetching: {url}")
 
         headers = {
-            "User-Agent": "TrendSleuth/1.0 (Research Bot)",
+            "User-Agent": USER_AGENT,
             "Accept": "text/html,application/xhtml+xml",
         }
 
