@@ -2,13 +2,14 @@
 
 > **From Reddit signals to validated ideas**
 
+[![PyPI version](https://badge.fury.io/py/trendsleuth.svg)](https://badge.fury.io/py/trendsleuth)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![codecov](https://codecov.io/gh/lukemaxwell/trendsleuth/graph/badge.svg)](https://codecov.io/gh/lukemaxwell/trendsleuth)
 
 TrendSleuth analyzes Reddit conversations to uncover emerging trends, pain points, and unanswered questions and turns those insights into actionable content, product, and business ideas.
 
-![Anaylsis screenshot](trendsleuth-analysis.png)
+![Analysis screenshot](https://raw.githubusercontent.com/lukemaxwell/trendsleuth/main/trendsleuth-analysis.png)
 
 ## Features
 
