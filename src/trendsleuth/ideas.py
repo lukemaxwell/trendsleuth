@@ -267,6 +267,9 @@ REQUIREMENTS:
 - Be specific and concrete, not generic
 - Address real pain points from the analysis
 - Focus on realistic, actionable businesses
+- Each idea should be something a small team could start in 3-6 months, not a large company project
+- Avoid vague "X for Y" ideas without a clear problem and solution
+- Ideas should be niche and targeted, not broad. Think "a new meal kit service for busy professionals" rather than "a new meal kit service"
 - Avoid buzzwords and vague descriptions
 - Each idea should be unique and differentiated
 
@@ -276,6 +279,10 @@ Each idea must include:
 - Target customer (specific segment)
 - Core pain being solved (from analysis)
 - Product description (what you're building)
+- Problem solved (clear problem statement)
+- Rationale (why this problem is important based on analysis)
+- Business model (how this app could make money)
+- Competitive landscape (brief overview of existing solutions and their shortcomings)
 - Why existing solutions fail (specific gaps)
 - Monetization model (clear revenue approach)
 - Pricing approach (concrete pricing strategy)
@@ -334,15 +341,34 @@ REQUIREMENTS:
 - Be specific about features and scope
 - Avoid generic "AI platform" or "ecosystem" ideas
 - Each idea should be unique
+- Focus on software/apps, not physical products or services
+- Avoid suggesting ideas in overcrowded spaces without a clear twist (e.g., "a new Twitter" is not good, but "a Twitter for X niche with feature Y" could be)
+- A catchy name does not make a good idea - focus on the problem and solution
+- The idea must be easily explainable in a few sentences, not a vague concept
+- Ideas should be niche and targeted, not broad. Think "app for X" with a clear X, not "a new social media platform"
+- Do not suggest ideas that are just content or communities without a clear product angle (e.g., "a newsletter about X" is not an app idea)
+- Do not suggest ideas that have existing popular apps that already solve the problem well unless you have a clear twist or improvement (e.g., "a new Twitter" is not a good idea, but "a Twitter for X niche with feature Y" could be)
+- Idea must not be a rehash of existing popular apps unless it has a clear twist
+- Idea should be something a small team could build in 3-6 months, not a large company project
+- Avoid vague "X for Y" ideas without a clear problem and solution
+- Avoid generic tools or utilities that don't have a specific user and problem in mind
+- Avoid ideas that are just a combination of existing apps without a clear unique value proposition
+- Avoid ideas that are too broad or ambitious to be actionable for a small team (e.g., "a new social media platform") without a clear niche and unique angle
+- Avoid buzzwords and vague descriptions
+
 
 Each idea must include:
 - App name (2-3 words, memorable)
 - Target user (specific user persona)
 - Problem solved (clear problem statement)
+- Rationale (why this problem is important based on analysis)
+- Business model (how this app could make money)
+- Competitive landscape (brief overview of existing solutions and their shortcomings)
 - Core features (3-5 bullet points, specific)
 - Unique value (what makes this different)
 - MVP scope (what to build first, be realistic)
 - Monetization approach (clear revenue model)
+- Early validation strategy (how to test demand)
 
 Output structured JSON.""",
             ),
