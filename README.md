@@ -2,13 +2,11 @@
 
 > **From Reddit signals to validated ideas**
 
-TrendSleuth analyzes Reddit conversations to uncover emerging trends, pain points, and unanswered questions and turns those insights into actionable content, product, and business ideas.
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![codecov](https://codecov.io/gh/lukemaxwell/trendsleuth/graph/badge.svg)](https://codecov.io/gh/lukemaxwell/trendsleuth)
 
-TrendSleuth helps content creators discover trending topics, pain points, and questions on Reddit by analyzing subreddits with AI.
+TrendSleuth analyzes Reddit conversations to uncover emerging trends, pain points, and unanswered questions and turns those insights into actionable content, product, and business ideas.
 
 ## Features
 
