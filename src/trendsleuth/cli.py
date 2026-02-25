@@ -23,6 +23,11 @@ from trendsleuth.config import (
 )
 from trendsleuth.formatter import format_json, format_markdown
 from trendsleuth.reddit import RedditClient
+from trendsleuth.ideas import (
+    load_analysis_file,
+    generate_ideas,
+    format_ideas_as_markdown,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -627,6 +632,137 @@ def niches(
     
     except Exception as e:
         logger.exception("Unexpected error generating niches")
+        console.print(
+            Panel(
+                f"[bold red]Unexpected error: {e}[/bold red]",
+                title="Error",
+                style="red",
+            )
+        )
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def ideas(
+    input_file: str = typer.Option(
+        ...,
+        "--input",
+        help="Path to TrendSleuth analysis file (JSON or Markdown)",
+    ),
+    idea_type: str = typer.Option(
+        "business",
+        "--type",
+        help="Type of ideas to generate (business, app, or content)",
+    ),
+    count: int = typer.Option(
+        1,
+        "--count",
+        help="Number of ideas to generate",
+    ),
+    output_format: str = typer.Option(
+        "md",
+        "--format",
+        help="Output format (md or json)",
+    ),
+    model: str = typer.Option(
+        "gpt-4o-mini",
+        "--model",
+        help="OpenAI model to use",
+    ),
+):
+    """Generate ideas from TrendSleuth analysis."""
+    # Validate configuration (only need OpenAI)
+    missing = validate_env_vars()
+    openai_missing = [var for var in missing if var.startswith("OPENAI_")]
+    if openai_missing:
+        console.print(
+            Panel(
+                f"[bold red]Missing required environment variables:[/bold red]\n"
+                f"  {', '.join(openai_missing)}\n\n"
+                "[bold]Please set these in your environment or .env file.",
+                title="Configuration Error",
+                style="red",
+            )
+        )
+        raise typer.Exit(code=1)
+    
+    # Validate idea type
+    if idea_type not in ('business', 'app', 'content'):
+        console.print(
+            Panel(
+                f"[bold red]Invalid idea type: {idea_type}[/bold red]\n\n"
+                "Must be one of: business, app, content",
+                title="Error",
+                style="red",
+            )
+        )
+        raise typer.Exit(code=1)
+    
+    # Validate format
+    if output_format not in ('md', 'json'):
+        console.print(
+            Panel(
+                f"[bold red]Invalid format: {output_format}[/bold red]\n\n"
+                "Must be one of: md, json",
+                title="Error",
+                style="red",
+            )
+        )
+        raise typer.Exit(code=1)
+    
+    # Load configuration
+    _, openai_config, _, _ = get_config()
+    openai_config.model = model
+    
+    try:
+        # Load analysis file
+        console.print(
+            Panel(
+                f"[bold cyan]Loading analysis from:[/bold cyan] {input_file}",
+                title="Input",
+                style="cyan",
+            )
+        )
+        
+        signals = load_analysis_file(input_file)
+        
+        # Generate ideas
+        console.print(
+            Panel(
+                f"[bold cyan]Generating {count} {idea_type} idea(s)...",
+                title="Generation",
+                style="cyan",
+            )
+        )
+        
+        ideas_data = generate_ideas(
+            config=openai_config,
+            signals=signals,
+            idea_type=idea_type,
+            count=count,
+        )
+        
+        # Format output
+        if output_format == 'json':
+            output = json.dumps(ideas_data, indent=2)
+        else:
+            output = format_ideas_as_markdown(ideas_data)
+        
+        # Print to stdout
+        console.print("\n")
+        console.print(output)
+        
+    except ValueError as e:
+        console.print(
+            Panel(
+                f"[bold red]{e}[/bold red]",
+                title="Error",
+                style="red",
+            )
+        )
+        raise typer.Exit(code=1)
+    except Exception as e:
+        logger.exception("Unexpected error generating ideas")
         console.print(
             Panel(
                 f"[bold red]Unexpected error: {e}[/bold red]",

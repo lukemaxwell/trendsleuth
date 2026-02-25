@@ -139,6 +139,54 @@ def test_query_generation():
         return False
 
 
+def test_ideas_module():
+    """Test ideas module."""
+    print("Testing ideas module...")
+    try:
+        from trendsleuth.ideas import (
+            AnalysisSignals,
+            _parse_json_analysis,
+            format_ideas_as_markdown
+        )
+        
+        # Test JSON parsing
+        import json
+        test_json = json.dumps({
+            "analysis": {
+                "summary": "Test",
+                "topics": ["T1"],
+                "pain_points": ["P1"],
+                "questions": ["Q1"]
+            }
+        })
+        signals = _parse_json_analysis(test_json)
+        assert signals.summary == "Test"
+        
+        # Test markdown formatting
+        ideas_data = {
+            "type": "business",
+            "ideas": [{
+                "name": "Test",
+                "description": "Desc",
+                "target_customer": "Users",
+                "core_pain": "Pain",
+                "product_description": "Product",
+                "why_existing_fail": "Fail",
+                "monetization": "Money",
+                "pricing": "$10",
+                "validation": "Beta"
+            }]
+        }
+        output = format_ideas_as_markdown(ideas_data)
+        assert "Test" in output
+        
+        print("✓ Ideas module works")
+        return True
+    except Exception as e:
+        print(f"✗ Ideas module failed: {e}")
+        return False
+
+
 def main():
     """Run all smoke tests."""
     print("=" * 60)
@@ -153,6 +201,7 @@ def main():
         test_brave_client,
         test_web_scraper,
         test_query_generation,
+        test_ideas_module,
     ]
     
     results = []

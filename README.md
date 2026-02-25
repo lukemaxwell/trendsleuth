@@ -13,6 +13,7 @@ TrendSleuth helps content creators discover trending topics, pain points, and qu
 - 📊 **AI-powered analysis** - Extract topics, pain points, and questions
 - 🔗 **Evidence collection** - Gather verbatim quotes from Reddit and web sources
 - 💡 **Niche generation** - Generate specific niche ideas for any theme
+- 🎯 **Idea generation** - Transform analysis into business, app, or content ideas
 - 📝 **Markdown & JSON output** - Get results in your preferred format
 - 🌐 **Web evidence** - Search the web using Brave Search API for additional insights
 - 💰 **Cost tracking** - See token usage and estimated API costs
@@ -117,6 +118,29 @@ JSON output:
 trendsleuth niches --theme "travel" --json
 ```
 
+### Generate Ideas from Analysis
+
+Transform TrendSleuth analysis into actionable business, app, or content ideas:
+
+```bash
+# Generate business ideas from analysis
+trendsleuth ideas --input analysis.json --type business --count 3
+
+# Generate app ideas
+trendsleuth ideas --input analysis.md --type app --count 5
+
+# Generate content ideas
+trendsleuth ideas --input report.json --type content --count 10
+
+# Get JSON output
+trendsleuth ideas --input analysis.json --type business --format json
+```
+
+Idea types:
+- **business**: Complete business concepts with monetization, validation, etc.
+- **app**: Product/MVP ideas with features and scope
+- **content**: High-engagement content ideas for social media
+
 ### Full Command Reference
 
 #### Analyze Command
@@ -151,6 +175,20 @@ Options:
   --theme TEXT         Topic or domain to generate niches for (required)
   --count INTEGER      Number of niches to generate (default: 15)
   --json               Output as JSON array
+  --model TEXT         OpenAI model (default: gpt-4o-mini)
+  --help               Show this message and exit
+```
+
+#### Ideas Command
+
+```
+Usage: trendsleuth ideas [OPTIONS]
+
+Options:
+  --input TEXT         Path to TrendSleuth analysis file (JSON or Markdown) (required)
+  --type TEXT          Type of ideas: business, app, or content (default: business)
+  --count INTEGER      Number of ideas to generate (default: 1)
+  --format TEXT        Output format: md or json (default: md)
   --model TEXT         OpenAI model (default: gpt-4o-mini)
   --help               Show this message and exit
 ```
@@ -268,6 +306,7 @@ trendsleuth/
 │   ├── config.py       # Configuration management
 │   ├── reddit.py       # Reddit API client
 │   ├── analyzer.py     # LLM-based analysis
+│   ├── ideas.py        # Idea generation from analysis
 │   ├── formatter.py    # Output formatting
 │   ├── brave.py        # Brave Search API client
 │   ├── web_scraper.py  # Web page text extraction
@@ -275,6 +314,7 @@ trendsleuth/
 ├── tests/
 │   ├── test_reddit.py
 │   ├── test_analyzer.py
+│   ├── test_ideas.py
 │   └── test_formatter.py
 ├── examples/
 │   └── sample-output.md
