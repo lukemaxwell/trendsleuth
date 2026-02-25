@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Critical:** Cost estimation now correctly reflects the actual model selected by user
 - Previously all cost estimates incorrectly used gpt-4o-mini pricing regardless of `--model` parameter
 - This could result in significant cost underestimation (e.g., gpt-4o is ~17x more expensive than gpt-4o-mini)
+- Screenshot image in README (switched back to full GitHub URL for PyPI compatibility)
 
 ### Technical
 - Added `TokenUsageTracker` callback handler for LangChain
