@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Screenshot image in README now uses full GitHub raw URL for PyPI compatibility
 - PyPI package page now displays the screenshot correctly
 
+### Added
+- PyPI version badge in README
+
 ## [0.1.4] - 2026-02-25
 
 ### Note
